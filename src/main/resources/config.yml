@@ -1,0 +1,26 @@
+# MonsterBattle configuration
+# Shared seed for all generated Farm_<team> worlds.
+# Set to -1 to reuse the seed of the first loaded (main) world.
+world-seed: -1
+
+# Name of the already existing template world to clone for each team during battle phase.
+arena-template-world: Arena
+
+# Whether each team should have their own Nether/End for Farm_*/Arena_* worlds
+separate-dimensions: true
+# Whether to also create The End for each separated base world
+create-end-dimensions: true
+
+# Monster spawner settings
+monster-spawner:
+  # If true, a cycle will attempt to spawn ALL pending kills (round-robin over spawn points)
+  spawn-all-on-cycle: false
+  # If spawn-all-on-cycle is false, cap number of spawns per cycle (-1 means use number of spawn points)
+  max-spawn-per-cycle: -1
+  # Tick interval between spawn cycles (20 ticks = 1s). Default 60 (3 seconds)
+  tick-interval: 60
+
+# If true, players' respawn (bed) location is set to their arena world spawn when battle phase starts
+set-arena-respawn: true
+# If true, players' respawn (bed) location is set to their farm world spawn when farming phase starts
+set-farm-respawn: true

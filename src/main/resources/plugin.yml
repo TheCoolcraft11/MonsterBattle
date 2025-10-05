@@ -1,0 +1,36 @@
+name: MonsterBattle
+version: '1.0-SNAPSHOT'
+main: de.thecoolcraft11.monsterBattle.MonsterBattle
+api-version: '1.21'
+
+commands:
+  setphase:
+    description: Set the game phase (lobby, farm, battle, end)
+    usage: /setphase <lobby|farm|battle|end>
+    permission: monsterbattle.setphase
+  mobspawn:
+    description: Adds / Clears Mob Spawn Points in the Arena
+    usage: /mobspawn <add|clear> <x> <y> <z>
+    permission: monsterbattle.setphase
+  dtp:
+    description: Teleport a player to a world (dimension) and coordinates
+    usage: /dtp <player> <world> <x> <y> <z>
+    permission: monsterbattle.dtp
+  worldname:
+    description: Show the current world name (your own or another player's)
+    usage: /worldname [player]
+    permission: monsterbattle.worldname
+
+permissions:
+  monsterbattle.setphase:
+    description: Allows changing the game phase
+    default: op
+  monsterbattle.notify:
+    description: Receive broadcast messages about phase changes
+    default: true
+  monsterbattle.dtp:
+    description: Allows using /dtp to teleport players between dimensions
+    default: op
+  monsterbattle.worldname:
+    description: Allows using /worldname
+    default: true
