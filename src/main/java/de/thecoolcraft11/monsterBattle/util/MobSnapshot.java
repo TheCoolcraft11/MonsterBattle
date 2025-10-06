@@ -3,7 +3,10 @@ package de.thecoolcraft11.monsterBattle.util;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Ageable;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Slime;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -25,8 +28,8 @@ import java.util.List;
 public class MobSnapshot {
     private final EntityType type;
     private final boolean baby;
-    private final Integer slimeSize; 
-    private final String customName; 
+    private final Integer slimeSize;
+    private final String customName;
     private final boolean customNameVisible;
     private final double health;
     private final ItemStack helmet, chest, legs, boots, mainHand, offHand;
@@ -60,8 +63,6 @@ public class MobSnapshot {
         boolean babyFlag = false;
         if (e instanceof Ageable ageable) {
             babyFlag = !ageable.isAdult();
-        } else if (e instanceof Zombie zombie) {
-            babyFlag = zombie.isBaby();
         }
         Integer size = null;
         if (e instanceof Slime slime) size = slime.getSize();
@@ -82,14 +83,10 @@ public class MobSnapshot {
     }
 
     public void apply(LivingEntity spawned) {
-        
         if (baby) {
             if (spawned instanceof Ageable ageable) ageable.setBaby();
-            else if (spawned instanceof Zombie zombie) zombie.setBaby(true);
         }
-        
         if (slimeSize != null && spawned instanceof Slime slime) slime.setSize(Math.max(1, slimeSize));
-        
         if (customName != null) {
             try {
                 spawned.customName(Component.text(customName));
@@ -98,7 +95,6 @@ public class MobSnapshot {
             }
             spawned.setCustomNameVisible(customNameVisible);
         }
-        
         EntityEquipment eq = spawned.getEquipment();
         if (eq != null) {
             if (helmet != null) eq.setHelmet(helmet.clone());
@@ -108,15 +104,15 @@ public class MobSnapshot {
             if (mainHand != null) eq.setItemInMainHand(mainHand.clone());
             if (offHand != null) eq.setItemInOffHand(offHand.clone());
         }
-        
         for (PotionEffect pe : potionEffects) spawned.addPotionEffect(pe);
-        
-        
+
+
         double max = spawned.getAttribute(Attribute.MAX_HEALTH) != null ? spawned.getAttribute(Attribute.MAX_HEALTH).getValue() : spawned.getHealth();
-        double target = (health <= 0) ? max : Math.min(max, health);
-        
-        if (target < 0.5) target = Math.min(max, 0.5);
-        spawned.setHealth(target);
+        double target;
+        if (health <= 0) target = max;
+        else if (health < max * 0.25) target = max;
+        else target = Math.min(max, health);
+        spawned.setHealth(Math.max(1.0, Math.min(max, target)));
     }
 
     private static ItemStack cloneOrNull(ItemStack stack) {

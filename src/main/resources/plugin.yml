@@ -9,8 +9,14 @@ commands:
     usage: /setphase <lobby|farm|battle|end>
     permission: monsterbattle.setphase
   mobspawn:
-    description: Adds / Clears Mob Spawn Points in the Arena
-    usage: /mobspawn <add|clear> <x> <y> <z>
+    description: Manage arena monster spawn points
+    usage: |-
+      /mobspawn add <x> <y> <z>
+      /mobspawn addhere
+      /mobspawn addrel <dx> <dy> <dz>
+      /mobspawn list
+      /mobspawn remove <index>
+      /mobspawn clear
     permission: monsterbattle.setphase
   dtp:
     description: Teleport a player to a world (dimension) and coordinates
@@ -20,6 +26,11 @@ commands:
     description: Show the current world name (your own or another player's)
     usage: /worldname [player]
     permission: monsterbattle.worldname
+  mobtp:
+    description: Teleport to a remaining tracked arena mob for your team (battle phase)
+    usage: |-
+      /mobtp [nearest|random|list]
+    permission: monsterbattle.mobtp
 
 permissions:
   monsterbattle.setphase:
@@ -33,4 +44,7 @@ permissions:
     default: op
   monsterbattle.worldname:
     description: Allows using /worldname
+    default: true
+  monsterbattle.mobtp:
+    description: Allows using /mobtp to teleport to tracked arena mobs
     default: true

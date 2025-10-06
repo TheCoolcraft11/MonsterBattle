@@ -1,6 +1,5 @@
 package de.thecoolcraft11.monsterBattle.command;
 
-import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -18,20 +17,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * /dtp <player> <world> <x> <y> <z>
- * Teleports the specified player to the given world/coordinates. If the world is not loaded but
- * exists on disk (or is intended to be created), it will be created using default NORMAL environment
- * unless a suffix implies a dimension:
- * _nether -> NETHER
- * _the_end -> THE_END
- */
 public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
 
-    private final MonsterBattle plugin;
-
-    public DimensionTeleportCommand(MonsterBattle plugin) {
-        this.plugin = plugin;
+    public DimensionTeleportCommand() {
     }
 
     @Override
@@ -61,7 +49,7 @@ public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
         }
         World world = Bukkit.getWorld(worldName);
         if (world == null) {
-            
+
             World.Environment env = World.Environment.NORMAL;
             if (worldName.endsWith("_nether")) env = World.Environment.NETHER;
             else if (worldName.endsWith("_the_end")) env = World.Environment.THE_END;
@@ -95,41 +83,42 @@ public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
             }
             case 2 -> {
                 String wPrefix = args[1].toLowerCase();
-                Set<String> worlds = new HashSet<>();
-                
-                for (World w : Bukkit.getWorlds()) worlds.add(w.getName());
-                
-                ScoreboardManager mgr = Bukkit.getScoreboardManager();
-                if (mgr != null) {
-                    for (Team t : mgr.getMainScoreboard().getTeams()) {
-                        String baseTeam = t.getName().replaceAll("[^A-Za-z0-9_-]", "_");
-                        worlds.add("Farm_" + baseTeam);
-                        worlds.add("Arena_" + baseTeam);
-                        worlds.add("Farm_" + baseTeam + "_nether");
-                        worlds.add("Farm_" + baseTeam + "_the_end");
-                        worlds.add("Arena_" + baseTeam + "_nether");
-                        worlds.add("Arena_" + baseTeam + "_the_end");
-                    }
-                }
+                Set<String> worlds = getWorlds();
                 return worlds.stream().filter(n -> n.toLowerCase().startsWith(wPrefix)).sorted().limit(50).collect(Collectors.toList());
             }
             case 3, 4, 5 -> {
-                
-                if (args.length == 3 || args.length == 4 || args.length == 5) {
-                    Player ref = Bukkit.getPlayerExact(args[0]);
-                    if (ref != null) {
-                        Location l = ref.getLocation();
-                        int val = switch (args.length) {
-                            case 3 -> l.getBlockX();
-                            case 4 -> l.getBlockY();
-                            default -> l.getBlockZ();
-                        };
-                        return Collections.singletonList(Integer.toString(val));
-                    }
+
+                Player ref = Bukkit.getPlayerExact(args[0]);
+                if (ref != null) {
+                    Location l = ref.getLocation();
+                    int val = switch (args.length) {
+                        case 3 -> l.getBlockX();
+                        case 4 -> l.getBlockY();
+                        default -> l.getBlockZ();
+                    };
+                    return Collections.singletonList(Integer.toString(val));
                 }
             }
         }
         return Collections.emptyList();
+    }
+
+    private static @NotNull Set<String> getWorlds() {
+        Set<String> worlds = new HashSet<>();
+
+        for (World w : Bukkit.getWorlds()) worlds.add(w.getName());
+
+        ScoreboardManager mgr = Bukkit.getScoreboardManager();
+        for (Team t : mgr.getMainScoreboard().getTeams()) {
+            String baseTeam = t.getName().replaceAll("[^A-Za-z0-9_-]", "_");
+            worlds.add("Farm_" + baseTeam);
+            worlds.add("Arena_" + baseTeam);
+            worlds.add("Farm_" + baseTeam + "_nether");
+            worlds.add("Farm_" + baseTeam + "_the_end");
+            worlds.add("Arena_" + baseTeam + "_nether");
+            worlds.add("Arena_" + baseTeam + "_the_end");
+        }
+        return worlds;
     }
 }
 

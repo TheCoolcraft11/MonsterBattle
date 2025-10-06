@@ -15,10 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * /worldname [player]
- * Shows the world name the command sender (or specified player) is currently in.
- */
+
 public class WorldNameCommand implements CommandExecutor, TabCompleter {
 
     @Override

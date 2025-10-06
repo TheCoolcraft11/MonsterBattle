@@ -1,5 +1,6 @@
 package de.thecoolcraft11.monsterBattle.util;
 
+import com.destroystokyo.paper.Title;
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -10,9 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -21,55 +20,58 @@ public class PhaseSwitchHook {
     private volatile boolean arenaCloneInProgress = false;
 
     public void newPhase(MonsterBattle plugin, GameState newPhase) {
-        DataController dataController = plugin.getDataController();
-        if (newPhase == GameState.FARMING) {
-            boolean setFarmRespawn = plugin.getConfig().getBoolean("set-farm-respawn", true); 
-            ScoreboardManager manager = Bukkit.getScoreboardManager();
-            if (manager == null) return;
-            Set<Team> teams = manager.getMainScoreboard().getTeams();
-            if (teams.isEmpty()) return;
-
-            long configuredSeed = plugin.getConfig().getLong("world-seed", -1L);
-            if (configuredSeed == -1L && !Bukkit.getWorlds().isEmpty()) {
-                configuredSeed = Bukkit.getWorlds().get(0).getSeed();
+        switch (newPhase) {
+            case FARMING -> handleFarmingPhase(plugin);
+            case BATTLE -> handleBattlePhase(plugin);
+            case ENDED -> handleEnded(plugin);
+            default -> {
             }
-
-            dataController.resetTeamKillsForTeams(teams.stream().map(Team::getName).collect(Collectors.toSet()));
-
-            for (Team team : teams) {
-                String baseName = "Farm_" + sanitizeWorldName(team.getName());
-
-                World world = Bukkit.getWorld(baseName);
-                if (world == null) {
-                    world = new WorldCreator(baseName).seed(configuredSeed).environment(World.Environment.NORMAL).createWorld();
-                }
-                if (world == null) continue;
-
-                createAuxDimensions(plugin, baseName, configuredSeed, null);
-
-                for (String entry : team.getEntries()) {
-                    Player player = Bukkit.getPlayerExact(entry);
-                    if (player != null && player.isOnline()) {
-                        Location spawn = world.getSpawnLocation();
-                        player.teleport(spawn);
-                        if (setFarmRespawn) {
-                            try {
-                                player.setBedSpawnLocation(spawn, true);
-                            } catch (NoSuchMethodError ignored) {
-                            }
-                        }
-                        player.sendMessage("You have been teleported to your farming world: " + baseName + " (seed: " + configuredSeed + ")" + (setFarmRespawn ? ChatColor.GRAY + " (respawn set)" : ""));
-                    }
-                }
-            }
-            return;
-        }
-
-        if (newPhase == GameState.BATTLE) {
-            handleBattlePhase(plugin);
         }
     }
 
+    /* ---------------- FARMING ---------------- */
+    private void handleFarmingPhase(MonsterBattle plugin) {
+        boolean setFarmRespawn = plugin.getConfig().getBoolean("set-farm-respawn", true);
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        Set<Team> teams = manager.getMainScoreboard().getTeams();
+        if (teams.isEmpty()) return;
+
+        long configuredSeed = plugin.getConfig().getLong("world-seed", -1L);
+        if (configuredSeed == -1L && !Bukkit.getWorlds().isEmpty()) {
+            configuredSeed = Bukkit.getWorlds().getFirst().getSeed();
+        }
+
+        plugin.getDataController().resetTeamKillsForTeams(teams.stream().map(Team::getName).collect(Collectors.toSet()));
+
+        for (Team team : teams) {
+            String baseName = "Farm_" + sanitizeWorldName(team.getName());
+            World world = Bukkit.getWorld(baseName);
+            if (world == null) {
+                world = new WorldCreator(baseName)
+                        .seed(configuredSeed)
+                        .environment(World.Environment.NORMAL)
+                        .createWorld();
+            }
+            if (world == null) continue;
+            createAuxDimensions(plugin, baseName, configuredSeed, null);
+
+            for (String entry : team.getEntries()) {
+                Player p = Bukkit.getPlayerExact(entry);
+                if (p == null || !p.isOnline()) continue;
+                Location spawn = world.getSpawnLocation();
+                p.teleport(spawn);
+                if (setFarmRespawn) {
+                    try {
+                        p.setRespawnLocation(spawn, true);
+                    } catch (NoSuchMethodError ignored) {
+                    }
+                }
+                p.sendMessage(ChatColor.GREEN + "Farming phase started: " + ChatColor.YELLOW + baseName + ChatColor.GRAY + " (seed: " + configuredSeed + ")" + (setFarmRespawn ? ChatColor.DARK_GRAY + " [respawn set]" : ""));
+            }
+        }
+    }
+
+    /* ---------------- BATTLE ---------------- */
     private void handleBattlePhase(MonsterBattle plugin) {
         if (arenaCloneInProgress) {
             plugin.getLogger().warning("Battle phase cloning already in progress. Ignoring additional request.");
@@ -79,6 +81,10 @@ public class PhaseSwitchHook {
         if (manager == null) return;
         Set<Team> teams = manager.getMainScoreboard().getTeams();
         if (teams.isEmpty()) return;
+
+        plugin.getDataController().battlePhaseStarted(teams.stream().map(Team::getName).collect(Collectors.toSet()));
+        
+        plugin.notifyBattleStarted();
 
         String templateName = plugin.getConfig().getString("arena-template-world", "Arena");
         boolean separateDims = plugin.getConfig().getBoolean("separate-dimensions", true);
@@ -124,9 +130,7 @@ public class PhaseSwitchHook {
 
         if (creationNeeded.isEmpty()) {
             loadAndTeleportArenas(plugin, teams, separateDims);
-            for (Team t : teams) {
-                new MonsterSpawner().start(plugin, t.getName());
-            }
+            startBattleSpawnCountdown(plugin, teams);
             if (unloaded) new WorldCreator(templateName).createWorld();
             return;
         }
@@ -151,14 +155,40 @@ public class PhaseSwitchHook {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 plugin.getLogger().info("Arena cloning complete. Created " + success.get() + " new arena worlds.");
                 loadAndTeleportArenas(plugin, teams, separateDims);
-                
-                for (Team t : teams) {
-                    new MonsterSpawner().start(plugin, t.getName());
-                }
+                startBattleSpawnCountdown(plugin, teams);
                 if (unloaded) new WorldCreator(templateName).createWorld();
                 arenaCloneInProgress = false;
             });
         });
+    }
+
+    private void startBattleSpawnCountdown(MonsterBattle plugin, Set<Team> teams) {
+        int countdown = plugin.getConfig().getInt("battle-spawn-countdown-seconds", 20);
+        if (countdown < 0) countdown = 0;
+        if (countdown == 0) {
+            Bukkit.broadcastMessage(ChatColor.GREEN + "Battle started! Spawners active.");
+            for (Team t : teams) new MonsterSpawner().start(plugin, t.getName());
+            return;
+        }
+        final int total = countdown;
+        for (int i = 0; i <= total; i++) {
+            int delay = i * 20;
+            int secondsLeft = total - i;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (plugin.getDataController().getGameState() != GameState.BATTLE) return;
+                if (secondsLeft > 0) {
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        p.sendTitle(ChatColor.RED + "Battle in", ChatColor.YELLOW + String.valueOf(secondsLeft) + ChatColor.GOLD + "s", 0, 20, 0);
+                    }
+                    if (secondsLeft % 5 == 0 || secondsLeft <= 5) {
+                        Bukkit.broadcastMessage(ChatColor.YELLOW + "Battle starting in " + secondsLeft + "s...");
+                    }
+                } else {
+                    Bukkit.broadcastMessage(ChatColor.GREEN + "Battle started! Spawners active.");
+                    for (Team t : teams) new MonsterSpawner().start(plugin, t.getName());
+                }
+            }, delay);
+        }
     }
 
     private void loadAndTeleportArenas(MonsterBattle plugin, Set<Team> teams, boolean separateDims) {
@@ -167,32 +197,131 @@ public class PhaseSwitchHook {
             String baseName = "Arena_" + sanitizeWorldName(team.getName());
             World targetWorld = Bukkit.getWorld(baseName);
             if (targetWorld == null) {
-                targetWorld = new WorldCreator(baseName).environment(World.Environment.NORMAL).type(WorldType.NORMAL).createWorld();
+                targetWorld = new WorldCreator(baseName)
+                        .environment(World.Environment.NORMAL)
+                        .type(WorldType.NORMAL)
+                        .createWorld();
             }
             if (targetWorld == null) continue;
-/*
-            if(separateDims) {
-                createAuxDimensions(plugin, baseName, targetWorld.getSeed(), null);
-            }
- */
+
+
             for (String entry : team.getEntries()) {
-                Player player = Bukkit.getPlayerExact(entry);
-                if (player != null && player.isOnline()) {
-                    Location spawn = targetWorld.getSpawnLocation();
-                    player.teleport(spawn);
-                    if (setRespawn) {
-                        try {
-                            player.setBedSpawnLocation(spawn, true); 
-                        } catch (NoSuchMethodError ignored) {
-                            
-                        }
+                Player p = Bukkit.getPlayerExact(entry);
+                if (p == null || !p.isOnline()) continue;
+                Location spawn = targetWorld.getSpawnLocation();
+                p.teleport(spawn);
+                if (setRespawn) {
+                    try {
+                        p.setRespawnLocation(spawn, true);
+                    } catch (NoSuchMethodError ignored) {
                     }
-                    player.sendMessage(ChatColor.GREEN + "Arena ready: " + baseName + (setRespawn ? ChatColor.GRAY + " (respawn set)" : ""));
                 }
+                p.sendMessage(ChatColor.GREEN + "Arena ready: " + baseName + (setRespawn ? ChatColor.GRAY + " (respawn set)" : ""));
             }
         }
     }
 
+    /* ---------------- ENDED (Countdown + Summary) ---------------- */
+    private void handleEnded(MonsterBattle plugin) {
+        var dc = plugin.getDataController();
+        Map<String, Long> finish = new LinkedHashMap<>(dc.getTeamFinishTimes());
+        List<Map.Entry<String, Long>> ordered = new ArrayList<>(finish.entrySet());
+        ordered.sort(Map.Entry.comparingByValue());
+        String winner = ordered.isEmpty() ? null : ordered.getFirst().getKey();
+
+        World mainWorld = Bukkit.getWorld("world");
+        if (mainWorld == null && !Bukkit.getWorlds().isEmpty()) mainWorld = Bukkit.getWorlds().getFirst();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (mainWorld != null) p.teleport(mainWorld.getSpawnLocation());
+        }
+
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        Team winnerTeam = winner != null ? manager.getMainScoreboard().getTeam(winner) : null;
+
+        int countdownSeconds = plugin.getConfig().getInt("end-countdown-seconds", 10);
+        if (countdownSeconds < 0) countdownSeconds = 0;
+
+        final String winnerCopy = winner;
+        final Team winnerTeamCopy = winnerTeam;
+        final Map<String, Long> finishTimes = finish;
+        final List<Map.Entry<String, Long>> orderedCopy = ordered;
+
+        if (countdownSeconds == 0) {
+            revealWinner(plugin, winnerCopy, winnerTeamCopy, finishTimes);
+            broadcastSummary(orderedCopy);
+            return;
+        }
+
+        for (int i = 0; i <= countdownSeconds; i++) {
+            int secondsLeft = countdownSeconds - i;
+            int delay = i * 20;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (secondsLeft > 0) {
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        p.sendTitle(new Title(ChatColor.AQUA + "Winner reveal in", "" + ChatColor.YELLOW + secondsLeft + ChatColor.GOLD + "s", 0, 20, 0));
+                    }
+                } else {
+                    revealWinner(plugin, winnerCopy, winnerTeamCopy, finishTimes);
+                    broadcastSummary(orderedCopy);
+                }
+            }, delay);
+        }
+    }
+
+    private void revealWinner(MonsterBattle plugin, String winner, Team winnerTeam, Map<String, Long> finishTimes) {
+        if (winner == null) {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                p.sendTitle(ChatColor.RED + "Game Over", ChatColor.GRAY + "No winner", 10, 80, 20);
+            }
+            Bukkit.broadcastMessage(ChatColor.RED + "Game Over - No winner");
+            return;
+        }
+        long ms = finishTimes.getOrDefault(winner, 0L);
+        double seconds = ms / 1000.0;
+
+
+        String playersList = "";
+        if (winnerTeam != null) {
+            List<String> names = new ArrayList<>(winnerTeam.getEntries());
+            names.sort(String.CASE_INSENSITIVE_ORDER);
+            playersList = String.join(", ", names);
+        }
+        String titleMain = ChatColor.GOLD + "WINNER: " + ChatColor.GREEN + winner + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")");
+
+        int captured = plugin.getDataController().getCapturedTotal(winner);
+        String subtitle = ChatColor.GRAY + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " - " + ChatColor.AQUA + captured + ChatColor.GRAY + " captured";
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.sendTitle(titleMain, subtitle, 10, 80, 20);
+        }
+        Bukkit.broadcastMessage(ChatColor.YELLOW + "Winner: " + ChatColor.GOLD + winner + ChatColor.WHITE + " (" + String.format("%.2f s", seconds) + ", " + captured + " captured)");
+    }
+
+    private void broadcastSummary(List<Map.Entry<String, Long>> ordered) {
+        Bukkit.broadcastMessage(ChatColor.AQUA + "===== Game Summary =====");
+        if (ordered.isEmpty()) {
+            Bukkit.broadcastMessage(ChatColor.GRAY + "No team finish times recorded.");
+        } else {
+            ScoreboardManager sm = Bukkit.getScoreboardManager();
+            for (int i = 0; i < ordered.size(); i++) {
+                Map.Entry<String, Long> e = ordered.get(i);
+                String teamName = e.getKey();
+                double seconds = e.getValue() / 1000.0;
+                Team t = sm.getMainScoreboard().getTeam(teamName);
+                String playersList = "";
+                if (t != null) {
+                    List<String> names = new ArrayList<>(t.getEntries());
+                    names.sort(String.CASE_INSENSITIVE_ORDER);
+                    playersList = String.join(", ", names);
+                }
+                int captured = Bukkit.getPluginManager().getPlugin("MonsterBattle") instanceof MonsterBattle mb ? mb.getDataController().getCapturedTotal(teamName) : 0;
+                Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (i + 1) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " | " + ChatColor.AQUA + captured + ChatColor.GRAY + " captured");
+            }
+        }
+        Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
+    }
+
+    /* ---------------- Helpers ---------------- */
     private String sanitizeWorldName(String raw) {
         return raw.replaceAll("[^A-Za-z0-9_-]", "_");
     }
@@ -217,18 +346,13 @@ public class PhaseSwitchHook {
             public @NotNull FileVisitResult preVisitDirectory(@NotNull Path dir, @NotNull BasicFileAttributes attrs) throws IOException {
                 Path relative = source.relativize(dir);
                 Path destDir = target.resolve(relative.toString());
-                if (!Files.exists(destDir)) {
-                    Files.createDirectories(destDir);
-                }
+                if (!Files.exists(destDir)) Files.createDirectories(destDir);
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
             public @NotNull FileVisitResult visitFile(@NotNull Path file, @NotNull BasicFileAttributes attrs) throws IOException {
                 String fileName = file.getFileName().toString();
-                if (fileName.equalsIgnoreCase("session.lock") || fileName.equalsIgnoreCase("uid.dat")) {
-                    return FileVisitResult.CONTINUE; 
-                }
                 Path relative = source.relativize(file);
                 Path destFile = target.resolve(relative.toString());
                 Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);

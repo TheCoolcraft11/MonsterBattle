@@ -19,8 +19,55 @@ monster-spawner:
   max-spawn-per-cycle: -1
   # Tick interval between spawn cycles (20 ticks = 1s). Default 60 (3 seconds)
   tick-interval: 60
+  # If true, spawned battle mobs are marked persistent / not removed when far away
+  persist-battle-mobs: true
+
+# Battle maintenance task: cleans up dead/despawned tracked mobs & retargets idle ones
+battle-maintenance:
+  enabled: true
+  # Initial delay before first maintenance run (ticks)
+  initial-delay-ticks: 60
+  # Period between runs (ticks) (100 = 5 seconds)
+  period-ticks: 100
+  # Remove tracked mobs that are dead, invalid or missing
+  remove-dead: true
+  # Retarget mobs which have no valid player target
+  retarget: true
+  # Re-apply persistence flags each cycle (extra safety against external changes)
+  reassert-persistence: true
+  # Log removals to console
+  debug-log: false
+
+# Keep battle arena chunks loaded to prevent natural despawn due to distance / unloading
+battle-chunk-loading:
+  enabled: true
+  # How often to reassert chunk force-loading (ticks). Set higher to reduce overhead.
+  refresh-ticks: 600
+  # Maximum forced chunks per world to avoid runaway memory usage (0 = unlimited)
+  max-forced-chunks-per-world: 256
+  # Debug logging for chunk (re)forcing
+  debug-log: false
 
 # If true, players' respawn (bed) location is set to their arena world spawn when battle phase starts
 set-arena-respawn: true
 # If true, players' respawn (bed) location is set to their farm world spawn when farming phase starts
 set-farm-respawn: true
+
+# Seconds to count down (title) before revealing winner in ENDED phase (0 to disable countdown)
+end-countdown-seconds: 10
+
+# Feedback toggles
+farming-capture-feedback: true               # Show a message to the killer when a mob is captured during FARMING
+battle-remaining-on-kill: true               # Show remaining monster count to the team when one of their arena mobs dies
+battle-remaining-on-spawn-cycle: true        # Show current active monster count to the team after a spawn cycle that spawned mobs
+battle-private-finish-message: true          # Send private finish message when team defeats all their arena mobs
+
+# Battle integrity scan (additional deep validation of tracked mobs). Set to 0 to disable.
+battle-integrity-scan:
+  enabled: true
+  period-ticks: 200          # 10 seconds; ensure stale entries cleaned quickly
+  debug-log: false
+
+# Toggle for removal listeners (EntityRemoveFromWorldEvent / EntitiesUnloadEvent)
+battle-removal-listeners:
+  enabled: true
