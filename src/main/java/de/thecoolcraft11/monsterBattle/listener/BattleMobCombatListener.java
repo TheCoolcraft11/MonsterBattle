@@ -3,10 +3,7 @@ package de.thecoolcraft11.monsterBattle.listener;
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.GameState;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -48,6 +45,7 @@ public class BattleMobCombatListener implements Listener {
         boolean damagerTracked = isTrackedBattleMob(damager);
         boolean victimTracked = isTrackedBattleMob(victim);
 
+        if (victim instanceof Ghast) return;
         if (damager instanceof Player) return;
 
         if (damagerTracked && !(victim instanceof Player)) {

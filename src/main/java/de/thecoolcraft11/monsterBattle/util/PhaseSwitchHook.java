@@ -83,7 +83,7 @@ public class PhaseSwitchHook {
         if (teams.isEmpty()) return;
 
         plugin.getDataController().battlePhaseStarted(teams.stream().map(Team::getName).collect(Collectors.toSet()));
-        
+
         plugin.notifyBattleStarted();
 
         String templateName = plugin.getConfig().getString("arena-template-world", "Arena");
@@ -208,7 +208,7 @@ public class PhaseSwitchHook {
             for (String entry : team.getEntries()) {
                 Player p = Bukkit.getPlayerExact(entry);
                 if (p == null || !p.isOnline()) continue;
-                Location spawn = targetWorld.getSpawnLocation();
+                Location spawn = targetWorld.getHighestBlockAt(targetWorld.getSpawnLocation()).getLocation();
                 p.teleport(spawn);
                 if (setRespawn) {
                     try {

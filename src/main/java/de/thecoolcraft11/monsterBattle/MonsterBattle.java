@@ -25,7 +25,7 @@ public final class MonsterBattle extends JavaPlugin {
     private int maintenanceTaskId = -1;
     private int chunkRefreshTaskId = -1;
     private int integrityScanTaskId = -1;
-    private ArenaBlockProtectionListener arenaBlockProtectionListener; 
+    private ArenaBlockProtectionListener arenaBlockProtectionListener;
 
     @Override
     public void onEnable() {
@@ -64,9 +64,11 @@ public final class MonsterBattle extends JavaPlugin {
         if (getConfig().getBoolean("battle-removal-listeners.enabled", true)) {
             getServer().getPluginManager().registerEvents(new BattleMobRemovalListener(this), this);
         }
-        
+
         arenaBlockProtectionListener = new ArenaBlockProtectionListener(this);
         getServer().getPluginManager().registerEvents(arenaBlockProtectionListener, this);
+        // Register respawn redirection listener to ensure correct dimension on bed destruction / invalidation
+        getServer().getPluginManager().registerEvents(new PhaseRespawnListener(this), this);
 
         boolean enableMaint = getConfig().getBoolean("battle-maintenance.enabled", true);
         if (enableMaint) {
@@ -103,7 +105,7 @@ public final class MonsterBattle extends JavaPlugin {
         return phaseSwitchHook;
     }
 
-    
+
     public void notifyBattleStarted() {
         if (arenaBlockProtectionListener != null) {
             arenaBlockProtectionListener.battleStarted();

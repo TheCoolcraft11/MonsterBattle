@@ -4,6 +4,7 @@ import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.GameState;
 import de.thecoolcraft11.monsterBattle.util.MobSnapshot;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -28,8 +29,8 @@ public class MobKillListener implements Listener {
         Player killer = event.getEntity().getKiller();
         if (killer == null) return;
         if (event.getEntity() instanceof Player) return;
+        if (event.getEntity() instanceof EnderDragon) return;
         LivingEntity living = event.getEntity();
-
         plugin.getServer().getScoreboardManager();
         Team team = plugin.getServer().getScoreboardManager().getMainScoreboard().getPlayerTeam(killer);
         if (team != null) {
