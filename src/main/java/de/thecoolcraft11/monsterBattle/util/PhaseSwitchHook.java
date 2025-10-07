@@ -286,7 +286,7 @@ public class PhaseSwitchHook {
             names.sort(String.CASE_INSENSITIVE_ORDER);
             playersList = String.join(", ", names);
         }
-        String titleMain = ChatColor.GOLD + "WINNER: " + ChatColor.GREEN + winner + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")");
+        String titleMain = ChatColor.GOLD + "WINNER: " + ChatColor.GREEN + winner;
 
         int captured = plugin.getDataController().getCapturedTotal(winner);
         String subtitle = ChatColor.GRAY + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " - " + ChatColor.AQUA + captured + ChatColor.GRAY + " captured";
