@@ -6,6 +6,7 @@ import java.util.*;
 
 public class DataController {
     private Map<String, List<MobSnapshot>> teamKills = new HashMap<>();
+    private final Map<String, List<MobSnapshot>> capturedMobsSnapshot = new HashMap<>(); 
     private GameState gameState = GameState.LOBBY;
     private final List<SpawnData> monsterSpawns = new ArrayList<>();
 
@@ -87,9 +88,15 @@ public class DataController {
         teamFinishTimes.clear();
         teamCapturedTotals.clear();
         battleStartTime = System.currentTimeMillis();
+
+        
+        capturedMobsSnapshot.clear();
         for (String t : teams) {
             activeMonsters.put(t, new HashSet<>());
-            teamCapturedTotals.put(t, getKillsForTeam(t).size());
+            List<MobSnapshot> teamList = getKillsForTeam(t);
+            teamCapturedTotals.put(t, teamList.size());
+            
+            capturedMobsSnapshot.put(t, new ArrayList<>(teamList));
         }
         clearBattleChunkTickets();
     }
@@ -146,11 +153,21 @@ public class DataController {
         return teamCapturedTotals.getOrDefault(team, 0);
     }
 
+    
+    public List<MobSnapshot> getCapturedMobsForTeam(String team) {
+        
+        if (gameState == GameState.BATTLE || gameState == GameState.ENDED) {
+            return capturedMobsSnapshot.getOrDefault(team, Collections.emptyList());
+        }
+        
+        return getKillsForTeam(team);
+    }
+
     public Map<String, Set<UUID>> getActiveMonstersView() {
 
         Map<String, Set<UUID>> copy = new HashMap<>();
         for (Map.Entry<String, Set<UUID>> e : activeMonsters.entrySet()) {
-            copy.put(e.getKey(), Collections.unmodifiableSet(new HashSet<>(e.getValue())));
+            copy.put(e.getKey(), Set.copyOf(e.getValue()));
         }
         return Collections.unmodifiableMap(copy);
     }
@@ -172,14 +189,13 @@ public class DataController {
         Set<Long> set = battleChunkTickets.computeIfAbsent(worldName, k -> new HashSet<>());
         if (limit > 0 && set.size() >= limit && !isBattleChunkTracked(worldName, chunkX, chunkZ)) return false;
         long key = (((long) chunkX) << 32) | (chunkZ & 0xffffffffL);
-        if (set.add(key)) return true;
-        return false;
+        return set.add(key);
     }
 
     public synchronized Map<String, Set<Long>> getBattleChunkTicketsView() {
         Map<String, Set<Long>> copy = new HashMap<>();
         for (var e : battleChunkTickets.entrySet()) {
-            copy.put(e.getKey(), Collections.unmodifiableSet(new HashSet<>(e.getValue())));
+            copy.put(e.getKey(), Set.copyOf(e.getValue()));
         }
         return Collections.unmodifiableMap(copy);
     }

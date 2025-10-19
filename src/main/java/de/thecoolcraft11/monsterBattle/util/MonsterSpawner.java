@@ -67,7 +67,7 @@ public class MonsterSpawner {
                             Location loc = new Location(world, sp.x, sp.y, sp.z);
                             var spawnedEntity = world.spawnEntity(loc, snap.getType());
                             if (spawnedEntity instanceof LivingEntity le) {
-                                snap.apply(le);
+                                snap.apply(le, plugin);
                                 plugin.getDataController().registerSpawn(currentTeam, le);
                                 applyPostSpawnEffects(plugin, thisTeam, le);
                                 spawnedThisCycle++;
@@ -96,7 +96,7 @@ public class MonsterSpawner {
                             Location loc = new Location(world, sp.x, sp.y, sp.z);
                             var spawnedEntity = world.spawnEntity(loc, snap.getType());
                             if (spawnedEntity instanceof LivingEntity le) {
-                                snap.apply(le);
+                                snap.apply(le, plugin);
                                 plugin.getDataController().registerSpawn(currentTeam, le);
                                 applyPostSpawnEffects(plugin, thisTeam, le);
                                 spawnedThisCycle++;

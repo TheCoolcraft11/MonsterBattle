@@ -26,6 +26,7 @@ public final class MonsterBattle extends JavaPlugin {
     private int chunkRefreshTaskId = -1;
     private int integrityScanTaskId = -1;
     private ArenaBlockProtectionListener arenaBlockProtectionListener;
+    private CapturedMobsInventoryListener capturedMobsInventoryListener;
 
     @Override
     public void onEnable() {
@@ -55,19 +56,28 @@ public final class MonsterBattle extends JavaPlugin {
             Objects.requireNonNull(getCommand("mobtp")).setExecutor(mtc);
             Objects.requireNonNull(getCommand("mobtp")).setTabCompleter(mtc);
         }
+        if (getCommand("capturedmobs") != null) {
+            CapturedMobsCommand cmc = new CapturedMobsCommand(this);
+            Objects.requireNonNull(getCommand("capturedmobs")).setExecutor(cmc);
+            Objects.requireNonNull(getCommand("capturedmobs")).setTabCompleter(cmc);
+        }
         getServer().getPluginManager().registerEvents(new MobKillListener(this), this);
         getServer().getPluginManager().registerEvents(new PortalRedirectListener(this), this);
         getServer().getPluginManager().registerEvents(new BattleMobDeathListener(this), this);
         getServer().getPluginManager().registerEvents(new BattleMobCombatListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinRetargetListener(this), this);
         getServer().getPluginManager().registerEvents(new BattleChunkListener(this), this);
+
+        capturedMobsInventoryListener = new CapturedMobsInventoryListener(this);
+        getServer().getPluginManager().registerEvents(capturedMobsInventoryListener, this);
+
         if (getConfig().getBoolean("battle-removal-listeners.enabled", true)) {
             getServer().getPluginManager().registerEvents(new BattleMobRemovalListener(this), this);
         }
 
         arenaBlockProtectionListener = new ArenaBlockProtectionListener(this);
         getServer().getPluginManager().registerEvents(arenaBlockProtectionListener, this);
-        // Register respawn redirection listener to ensure correct dimension on bed destruction / invalidation
+        
         getServer().getPluginManager().registerEvents(new PhaseRespawnListener(this), this);
 
         boolean enableMaint = getConfig().getBoolean("battle-maintenance.enabled", true);
@@ -105,6 +115,9 @@ public final class MonsterBattle extends JavaPlugin {
         return phaseSwitchHook;
     }
 
+    public CapturedMobsInventoryListener getCapturedMobsInventoryListener() {
+        return capturedMobsInventoryListener;
+    }
 
     public void notifyBattleStarted() {
         if (arenaBlockProtectionListener != null) {

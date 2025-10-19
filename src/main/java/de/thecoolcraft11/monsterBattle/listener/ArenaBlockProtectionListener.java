@@ -13,16 +13,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 
 import java.util.*;
 
-/**
- * Protects original arena world blocks during the battle phase so that:
- * - Players can only break blocks they (or another player) placed during the current battle
- * - Explosions (TNT, creepers, etc.) only destroy player-placed blocks
- * <p>
- * Implementation detail:
- * We treat every block that exists at the start of a battle as "protected". We do not need to
- * scan all blocks; instead we whitelist blocks that players place during the battle. Only
- * whitelisted (placed) blocks may be broken or destroyed by explosions.
- */
+
 public class ArenaBlockProtectionListener implements Listener {
 
     private final MonsterBattle plugin;
@@ -33,9 +24,7 @@ public class ArenaBlockProtectionListener implements Listener {
         this.plugin = plugin;
     }
 
-    /**
-     * Called by plugin when a new battle phase starts to clear tracking.
-     */
+    
     public void battleStarted() {
         placedBlocks.clear();
     }

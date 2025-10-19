@@ -29,7 +29,7 @@ public class PhaseSwitchHook {
         }
     }
 
-    /* ---------------- FARMING ---------------- */
+    
     private void handleFarmingPhase(MonsterBattle plugin) {
         boolean setFarmRespawn = plugin.getConfig().getBoolean("set-farm-respawn", true);
         ScoreboardManager manager = Bukkit.getScoreboardManager();
@@ -71,7 +71,7 @@ public class PhaseSwitchHook {
         }
     }
 
-    /* ---------------- BATTLE ---------------- */
+    
     private void handleBattlePhase(MonsterBattle plugin) {
         if (arenaCloneInProgress) {
             plugin.getLogger().warning("Battle phase cloning already in progress. Ignoring additional request.");
@@ -221,7 +221,7 @@ public class PhaseSwitchHook {
         }
     }
 
-    /* ---------------- ENDED (Countdown + Summary) ---------------- */
+    
     private void handleEnded(MonsterBattle plugin) {
         var dc = plugin.getDataController();
         Map<String, Long> finish = new LinkedHashMap<>(dc.getTeamFinishTimes());
@@ -248,7 +248,7 @@ public class PhaseSwitchHook {
 
         if (countdownSeconds == 0) {
             revealWinner(plugin, winnerCopy, winnerTeamCopy, finishTimes);
-            broadcastSummary(orderedCopy);
+            broadcastSummary(plugin, orderedCopy);
             return;
         }
 
@@ -262,7 +262,7 @@ public class PhaseSwitchHook {
                     }
                 } else {
                     revealWinner(plugin, winnerCopy, winnerTeamCopy, finishTimes);
-                    broadcastSummary(orderedCopy);
+                    broadcastSummary(plugin, orderedCopy);
                 }
             }, delay);
         }
@@ -289,39 +289,65 @@ public class PhaseSwitchHook {
         String titleMain = ChatColor.GOLD + "WINNER: " + ChatColor.GREEN + winner;
 
         int captured = plugin.getDataController().getCapturedTotal(winner);
-        String subtitle = ChatColor.GRAY + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " - " + ChatColor.AQUA + captured + ChatColor.GRAY + " captured";
+        double ratio = captured > 0 ? seconds / captured : 0.0;
+        String ratioPart = captured > 0 ? ChatColor.LIGHT_PURPLE + String.format(" %.2f s/mob", ratio) : ChatColor.DARK_GRAY + " N/A";
+        String subtitle = ChatColor.GRAY + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " - " + ChatColor.AQUA + captured + ChatColor.GRAY + " captured" + ChatColor.DARK_GRAY + " | " + ratioPart;
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.sendTitle(titleMain, subtitle, 10, 80, 20);
         }
-        Bukkit.broadcastMessage(ChatColor.YELLOW + "Winner: " + ChatColor.GOLD + winner + ChatColor.WHITE + " (" + String.format("%.2f s", seconds) + ", " + captured + " captured)");
+        Bukkit.broadcastMessage(ChatColor.YELLOW + "Winner: " + ChatColor.GOLD + winner + ChatColor.WHITE + " (" + String.format("%.2f s", seconds) + ", " + captured + " captured, " + (captured > 0 ? String.format("%.2f s/mob", ratio) : "N/A") + ")");
     }
 
-    private void broadcastSummary(List<Map.Entry<String, Long>> ordered) {
+    private void broadcastSummary(MonsterBattle plugin, List<Map.Entry<String, Long>> ordered) {
         Bukkit.broadcastMessage(ChatColor.AQUA + "===== Game Summary =====");
-        if (ordered.isEmpty()) {
-            Bukkit.broadcastMessage(ChatColor.GRAY + "No team finish times recorded.");
-        } else {
-            ScoreboardManager sm = Bukkit.getScoreboardManager();
-            for (int i = 0; i < ordered.size(); i++) {
-                Map.Entry<String, Long> e = ordered.get(i);
-                String teamName = e.getKey();
-                double seconds = e.getValue() / 1000.0;
-                Team t = sm.getMainScoreboard().getTeam(teamName);
-                String playersList = "";
-                if (t != null) {
-                    List<String> names = new ArrayList<>(t.getEntries());
-                    names.sort(String.CASE_INSENSITIVE_ORDER);
-                    playersList = String.join(", ", names);
-                }
-                int captured = Bukkit.getPluginManager().getPlugin("MonsterBattle") instanceof MonsterBattle mb ? mb.getDataController().getCapturedTotal(teamName) : 0;
-                Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (i + 1) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " | " + ChatColor.AQUA + captured + ChatColor.GRAY + " captured");
+        ScoreboardManager sm = Bukkit.getScoreboardManager();
+        if (sm == null) {
+            Bukkit.broadcastMessage(ChatColor.RED + "Scoreboard unavailable.");
+            Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
+            return;
+        }
+        var scoreboardTeams = new ArrayList<>(sm.getMainScoreboard().getTeams());
+        if (scoreboardTeams.isEmpty()) {
+            Bukkit.broadcastMessage(ChatColor.GRAY + "No teams present.");
+            Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
+            return;
+        }
+
+        
+        Set<String> finishedNames = ordered.stream().map(Map.Entry::getKey).collect(Collectors.toCollection(LinkedHashSet::new));
+        int rank = 1;
+        for (Map.Entry<String, Long> e : ordered) {
+            String teamName = e.getKey();
+            double seconds = e.getValue() / 1000.0;
+            Team t = sm.getMainScoreboard().getTeam(teamName);
+            String playersList = "";
+            if (t != null) {
+                List<String> names = new ArrayList<>(t.getEntries());
+                names.sort(String.CASE_INSENSITIVE_ORDER);
+                playersList = String.join(", ", names);
             }
+            int captured = plugin.getDataController().getCapturedTotal(teamName);
+            double ratio = captured > 0 ? seconds / captured : 0.0;
+            String ratioStr = captured > 0 ? ChatColor.LIGHT_PURPLE + String.format("%.2f s/mob", ratio) : ChatColor.DARK_GRAY + "N/A";
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (rank++) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " / " + ChatColor.AQUA + captured + ChatColor.GRAY + " mobs" + ChatColor.DARK_GRAY + " | " + ratioStr);
+        }
+
+        
+        for (Team t : scoreboardTeams) {
+            if (finishedNames.contains(t.getName())) continue;
+            String teamName = t.getName();
+            List<String> names = new ArrayList<>(t.getEntries());
+            names.sort(String.CASE_INSENSITIVE_ORDER);
+            String playersList = String.join(", ", names);
+            int captured = plugin.getDataController().getCapturedTotal(teamName);
+            String ratioStr = captured > 0 ? ChatColor.LIGHT_PURPLE + "? s/mob" : ChatColor.DARK_GRAY + "N/A"; 
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (rank++) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + ChatColor.RED + "DNF" + ChatColor.DARK_GRAY + " / " + ChatColor.AQUA + captured + ChatColor.GRAY + " mobs" + ChatColor.DARK_GRAY + " | " + ratioStr);
         }
         Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
     }
 
-    /* ---------------- Helpers ---------------- */
+    
     private String sanitizeWorldName(String raw) {
         return raw.replaceAll("[^A-Za-z0-9_-]", "_");
     }
@@ -361,3 +387,4 @@ public class PhaseSwitchHook {
         });
     }
 }
+

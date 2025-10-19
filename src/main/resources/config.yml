@@ -21,6 +21,8 @@ monster-spawner:
   tick-interval: 60
   # If true, spawned battle mobs are marked persistent / not removed when far away
   persist-battle-mobs: true
+  # If true, potion effects of spawned battle mobs are infinite duration
+  infinite-potion-effects: true
 
 # Battle maintenance task: cleans up dead/despawned tracked mobs & retargets idle ones
 battle-maintenance:

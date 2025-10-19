@@ -31,6 +31,10 @@ commands:
     usage: |-
       /mobtp [nearest|random|list]
     permission: monsterbattle.mobtp
+  capturedmobs:
+    description: View captured mobs summary for your team or another team
+    usage: /capturedmobs [team]
+    permission: monsterbattle.captured.view
 
 permissions:
   monsterbattle.setphase:
@@ -48,3 +52,12 @@ permissions:
   monsterbattle.mobtp:
     description: Allows using /mobtp to teleport to tracked arena mobs
     default: true
+  monsterbattle.captured.view:
+    description: Allows viewing your own team's captured mobs
+    default: true
+  monsterbattle.captured.others:
+    description: Allows viewing other teams' captured mobs
+    default: op
+  monsterbattle.captured.summary:
+    description: Allows viewing summary of captured mobs for all teams
+    default: op

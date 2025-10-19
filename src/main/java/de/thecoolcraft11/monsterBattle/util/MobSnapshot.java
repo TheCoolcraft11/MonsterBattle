@@ -1,5 +1,6 @@
 package de.thecoolcraft11.monsterBattle.util;
 
+import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.attribute.Attribute;
@@ -14,17 +15,7 @@ import org.bukkit.potion.PotionEffect;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Captures key properties of a killed mob so it can be reproduced later.
- * Currently preserves:
- * - EntityType
- * - Baby / adult state (Ageable, Zombie variants)
- * - Slime/MagmaCube size
- * - Custom name + visibility
- * - Basic equipment (main/off-hand + armor)
- * - Active potion effects
- * Extend as needed for more attributes.
- */
+
 public class MobSnapshot {
     private final EntityType type;
     private final boolean baby;
@@ -82,7 +73,7 @@ public class MobSnapshot {
                 helmet, chest, legs, boots, main, off, effects);
     }
 
-    public void apply(LivingEntity spawned) {
+    public void apply(LivingEntity spawned, MonsterBattle plugin) {
         if (baby) {
             if (spawned instanceof Ageable ageable) ageable.setBaby();
         }
@@ -104,7 +95,37 @@ public class MobSnapshot {
             if (mainHand != null) eq.setItemInMainHand(mainHand.clone());
             if (offHand != null) eq.setItemInOffHand(offHand.clone());
         }
-        for (PotionEffect pe : potionEffects) spawned.addPotionEffect(pe);
+
+
+        boolean infiniteEffects = plugin.getConfig().getBoolean("monster-spawner.infinite-potion-effects", true);
+        for (PotionEffect pe : potionEffects) {
+            if (infiniteEffects) {
+
+                PotionEffect infiniteEffect;
+                try {
+                    infiniteEffect = new PotionEffect(
+                            pe.getType(),
+                            Integer.MAX_VALUE,
+                            pe.getAmplifier(),
+                            pe.isAmbient(),
+                            pe.hasParticles(),
+                            pe.hasIcon()
+                    );
+                } catch (NoSuchMethodError | IllegalArgumentException e) {
+
+                    infiniteEffect = new PotionEffect(
+                            pe.getType(),
+                            1_000_000,
+                            pe.getAmplifier(),
+                            pe.isAmbient(),
+                            pe.hasParticles()
+                    );
+                }
+                spawned.addPotionEffect(infiniteEffect);
+            } else {
+                spawned.addPotionEffect(pe);
+            }
+        }
 
 
         double max = spawned.getAttribute(Attribute.MAX_HEALTH) != null ? spawned.getAttribute(Attribute.MAX_HEALTH).getValue() : spawned.getHealth();
