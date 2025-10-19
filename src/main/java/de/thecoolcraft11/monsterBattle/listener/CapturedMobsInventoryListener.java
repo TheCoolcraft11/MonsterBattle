@@ -108,16 +108,16 @@ public class CapturedMobsInventoryListener implements Listener {
         data.inventory.setItem(currentSlot.slot, stack);
 
 
-        if (currentCount >= currentSlot.targetCount) {
-
-            Player player = Bukkit.getPlayer(playerId);
-            if (player != null && player.isOnline()) {
-                try {
-                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
-                } catch (Exception ignored) {
-                }
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null && player.isOnline()) {
+            try {
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 1.0f + (currentCount * 0.05f));
+            } catch (Exception ignored) {
             }
+        }
 
+
+        if (currentCount >= currentSlot.targetCount) {
 
             data.currentSlotIndex++;
             data.currentTick = 0;

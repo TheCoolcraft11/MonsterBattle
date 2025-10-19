@@ -2,6 +2,7 @@ package de.thecoolcraft11.monsterBattle;
 
 import de.thecoolcraft11.monsterBattle.command.*;
 import de.thecoolcraft11.monsterBattle.listener.*;
+import de.thecoolcraft11.monsterBattle.util.BossbarController;
 import de.thecoolcraft11.monsterBattle.util.DataController;
 import de.thecoolcraft11.monsterBattle.util.GameState;
 import de.thecoolcraft11.monsterBattle.util.PhaseSwitchHook;
@@ -22,6 +23,7 @@ public final class MonsterBattle extends JavaPlugin {
 
     private final DataController dataController = new DataController();
     private final PhaseSwitchHook phaseSwitchHook = new PhaseSwitchHook();
+    private final BossbarController bossbarController = new BossbarController(this);
     private int maintenanceTaskId = -1;
     private int chunkRefreshTaskId = -1;
     private int integrityScanTaskId = -1;
@@ -31,6 +33,17 @@ public final class MonsterBattle extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        
+        if (getConfig().getBoolean("cleanup-on-reload.delete-bossbars-on-enable", true)) {
+            bossbarController.removeAll();
+        }
+
+        
+        if (getConfig().getBoolean("cleanup-on-reload.remove-worlds-on-enable", false)) {
+            cleanupGameWorlds();
+        }
+
         if (getCommand("setphase") != null) {
             SetPhaseCommand sp = new SetPhaseCommand(this);
             Objects.requireNonNull(getCommand("setphase")).setExecutor(sp);
@@ -77,7 +90,7 @@ public final class MonsterBattle extends JavaPlugin {
 
         arenaBlockProtectionListener = new ArenaBlockProtectionListener(this);
         getServer().getPluginManager().registerEvents(arenaBlockProtectionListener, this);
-        
+
         getServer().getPluginManager().registerEvents(new PhaseRespawnListener(this), this);
 
         boolean enableMaint = getConfig().getBoolean("battle-maintenance.enabled", true);
@@ -104,6 +117,17 @@ public final class MonsterBattle extends JavaPlugin {
         if (chunkRefreshTaskId != -1) Bukkit.getScheduler().cancelTask(chunkRefreshTaskId);
         if (integrityScanTaskId != -1) Bukkit.getScheduler().cancelTask(integrityScanTaskId);
         releaseBattleChunks();
+
+        
+        if (getConfig().getBoolean("cleanup-on-reload.delete-bossbars-on-disable", true)) {
+            bossbarController.removeAll();
+        }
+
+        
+        if (getConfig().getBoolean("cleanup-on-reload.remove-worlds-on-disable", false)) {
+            cleanupGameWorlds();
+        }
+
         HandlerList.unregisterAll(this);
     }
 
@@ -113,6 +137,10 @@ public final class MonsterBattle extends JavaPlugin {
 
     public PhaseSwitchHook getPhaseSwitchHook() {
         return phaseSwitchHook;
+    }
+
+    public BossbarController getBossbarController() {
+        return bossbarController;
     }
 
     public CapturedMobsInventoryListener getCapturedMobsInventoryListener() {
@@ -272,6 +300,60 @@ public final class MonsterBattle extends JavaPlugin {
         }
         if (removed > 0 && debug) {
             getLogger().info("Integrity scan pruned " + removed + " stale tracked mobs.");
+        }
+    }
+
+    private void cleanupGameWorlds() {
+        getLogger().info("[Cleanup] Starting world cleanup...");
+        int removed = 0;
+
+        
+        World mainWorld = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
+        if (mainWorld == null) {
+            getLogger().warning("[Cleanup] Cannot find main world for teleporting players!");
+            return;
+        }
+
+        for (World world : Bukkit.getWorlds()) {
+            if (world == null) continue;
+            String worldName = world.getName();
+
+            
+            boolean isGameWorld = worldName.startsWith("Arena_") ||
+                    worldName.startsWith("Farm_") ||
+                    worldName.matches("Arena_.*_(nether|the_end)") ||
+                    worldName.matches("Farm_.*_(nether|the_end)");
+
+            if (!isGameWorld) continue;
+
+            try {
+                getLogger().info("[Cleanup] Removing world: " + worldName);
+
+                
+                for (Player player : world.getPlayers()) {
+                    player.teleport(mainWorld.getSpawnLocation());
+                    player.sendMessage("§eYou were teleported because the world " + worldName + " is being cleaned up.");
+                }
+
+                
+                world.save();
+                boolean unloaded = Bukkit.unloadWorld(world, false);
+
+                if (unloaded) {
+                    removed++;
+                    getLogger().info("[Cleanup] Successfully unloaded world: " + worldName);
+                } else {
+                    getLogger().warning("[Cleanup] Failed to unload world: " + worldName);
+                }
+            } catch (Exception e) {
+                getLogger().warning("[Cleanup] Error cleaning up world " + worldName + ": " + e.getMessage());
+            }
+        }
+
+        if (removed > 0) {
+            getLogger().info("[Cleanup] Successfully cleaned up " + removed + " game worlds.");
+        } else {
+            getLogger().info("[Cleanup] No game worlds found to clean up.");
         }
     }
 }

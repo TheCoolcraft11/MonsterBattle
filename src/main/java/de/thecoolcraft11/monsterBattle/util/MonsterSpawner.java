@@ -116,6 +116,11 @@ public class MonsterSpawner {
                             }
                         }
                     }
+
+                    
+                    if (spawnedThisCycle > 0) {
+                        updateBossbarForTeam(plugin, currentTeam);
+                    }
                 } catch (Exception ex) {
                     System.err.println("[MonsterSpawner] Error while spawning for team " + currentTeam + ": " + ex.getMessage());
                     ex.printStackTrace();
@@ -216,5 +221,36 @@ public class MonsterSpawner {
 
     private String sanitizeWorldName(String raw) {
         return raw.replaceAll("[^A-Za-z0-9_-]", "_");
+    }
+
+    private void updateBossbarForTeam(MonsterBattle plugin, String teamName) {
+        var dc = plugin.getDataController();
+        var sbManager = plugin.getServer().getScoreboardManager();
+        if (sbManager == null) return;
+
+        Set<Team> allTeams = new HashSet<>(sbManager.getMainScoreboard().getTeams());
+        Team thisTeam = sbManager.getMainScoreboard().getTeam(teamName);
+        if (thisTeam == null) return;
+        allTeams.remove(thisTeam);
+
+        
+        int totalMobs = 0;
+        for (Team t : allTeams) {
+            totalMobs += dc.getCapturedTotal(t.getName());
+        }
+
+        
+        int spawnedMobs = dc.getRemainingForTeam(teamName);
+
+        
+        
+        int waitingToSpawn = 0;
+        for (Team t : allTeams) {
+            waitingToSpawn += dc.getKillsForTeam(t.getName()).size();
+        }
+        int actualSpawned = totalMobs - waitingToSpawn;
+        int mobsKilled = actualSpawned - spawnedMobs;
+
+        plugin.getBossbarController().updateProgress(teamName, mobsKilled, totalMobs, actualSpawned);
     }
 }

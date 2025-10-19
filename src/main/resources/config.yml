@@ -55,6 +55,17 @@ set-arena-respawn: true
 # If true, players' respawn (bed) location is set to their farm world spawn when farming phase starts
 set-farm-respawn: true
 
+# Cleanup settings when plugin enables/disables
+cleanup-on-reload:
+  # Remove all Arena_* and Farm_* worlds when plugin enables
+  remove-worlds-on-enable: true
+  # Remove all Arena_* and Farm_* worlds when plugin disables
+  remove-worlds-on-disable: true
+  # Delete boss bars when plugin enables
+  delete-bossbars-on-enable: true
+  # Delete boss bars when plugin disables
+  delete-bossbars-on-disable: true
+
 # Seconds to count down (title) before revealing winner in ENDED phase (0 to disable countdown)
 end-countdown-seconds: 10
 

@@ -29,7 +29,7 @@ public class PhaseSwitchHook {
         }
     }
 
-    
+
     private void handleFarmingPhase(MonsterBattle plugin) {
         boolean setFarmRespawn = plugin.getConfig().getBoolean("set-farm-respawn", true);
         ScoreboardManager manager = Bukkit.getScoreboardManager();
@@ -71,7 +71,7 @@ public class PhaseSwitchHook {
         }
     }
 
-    
+
     private void handleBattlePhase(MonsterBattle plugin) {
         if (arenaCloneInProgress) {
             plugin.getLogger().warning("Battle phase cloning already in progress. Ignoring additional request.");
@@ -83,6 +83,11 @@ public class PhaseSwitchHook {
         if (teams.isEmpty()) return;
 
         plugin.getDataController().battlePhaseStarted(teams.stream().map(Team::getName).collect(Collectors.toSet()));
+
+        
+        for (Team team : teams) {
+            plugin.getBossbarController().initialize(team.getName());
+        }
 
         plugin.notifyBattleStarted();
 
@@ -221,7 +226,7 @@ public class PhaseSwitchHook {
         }
     }
 
-    
+
     private void handleEnded(MonsterBattle plugin) {
         var dc = plugin.getDataController();
         Map<String, Long> finish = new LinkedHashMap<>(dc.getTeamFinishTimes());
@@ -229,14 +234,23 @@ public class PhaseSwitchHook {
         ordered.sort(Map.Entry.comparingByValue());
         String winner = ordered.isEmpty() ? null : ordered.getFirst().getKey();
 
+        
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager != null) {
+            Set<Team> teams = manager.getMainScoreboard().getTeams();
+            for (Team team : teams) {
+                plugin.getBossbarController().hide(team.getName());
+                plugin.getBossbarController().cleanup(team.getName());
+            }
+        }
+
         World mainWorld = Bukkit.getWorld("world");
         if (mainWorld == null && !Bukkit.getWorlds().isEmpty()) mainWorld = Bukkit.getWorlds().getFirst();
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (mainWorld != null) p.teleport(mainWorld.getSpawnLocation());
         }
 
-        ScoreboardManager manager = Bukkit.getScoreboardManager();
-        Team winnerTeam = winner != null ? manager.getMainScoreboard().getTeam(winner) : null;
+        Team winnerTeam = winner != null && manager != null ? manager.getMainScoreboard().getTeam(winner) : null;
 
         int countdownSeconds = plugin.getConfig().getInt("end-countdown-seconds", 10);
         if (countdownSeconds < 0) countdownSeconds = 0;
@@ -314,7 +328,7 @@ public class PhaseSwitchHook {
             return;
         }
 
-        
+
         Set<String> finishedNames = ordered.stream().map(Map.Entry::getKey).collect(Collectors.toCollection(LinkedHashSet::new));
         int rank = 1;
         for (Map.Entry<String, Long> e : ordered) {
@@ -333,7 +347,7 @@ public class PhaseSwitchHook {
             Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (rank++) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " / " + ChatColor.AQUA + captured + ChatColor.GRAY + " mobs" + ChatColor.DARK_GRAY + " | " + ratioStr);
         }
 
-        
+
         for (Team t : scoreboardTeams) {
             if (finishedNames.contains(t.getName())) continue;
             String teamName = t.getName();
@@ -341,13 +355,13 @@ public class PhaseSwitchHook {
             names.sort(String.CASE_INSENSITIVE_ORDER);
             String playersList = String.join(", ", names);
             int captured = plugin.getDataController().getCapturedTotal(teamName);
-            String ratioStr = captured > 0 ? ChatColor.LIGHT_PURPLE + "? s/mob" : ChatColor.DARK_GRAY + "N/A"; 
+            String ratioStr = captured > 0 ? ChatColor.LIGHT_PURPLE + "? s/mob" : ChatColor.DARK_GRAY + "N/A";
             Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (rank++) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + ChatColor.RED + "DNF" + ChatColor.DARK_GRAY + " / " + ChatColor.AQUA + captured + ChatColor.GRAY + " mobs" + ChatColor.DARK_GRAY + " | " + ratioStr);
         }
         Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
     }
 
-    
+
     private String sanitizeWorldName(String raw) {
         return raw.replaceAll("[^A-Za-z0-9_-]", "_");
     }
