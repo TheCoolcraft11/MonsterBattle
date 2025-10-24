@@ -20,7 +20,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 
-
 public class CapturedMobsInventoryListener implements Listener {
 
     private final MonsterBattle plugin;
@@ -36,6 +35,9 @@ public class CapturedMobsInventoryListener implements Listener {
         public BukkitTask task;
         public int currentTick = 0;
         public int currentSlotIndex = 0;
+        public int lastDisplayedCount = 0;
+        
+        public float previousPitch = 1.0f;
 
         public AnimationData(Inventory inventory, List<SlotData> slots) {
             this.inventory = inventory;
@@ -64,20 +66,18 @@ public class CapturedMobsInventoryListener implements Listener {
     public void startAnimation(Player player, Inventory inventory, List<SlotData> slotData) {
         UUID playerId = player.getUniqueId();
 
-
         stopAnimation(playerId);
 
         AnimationData data = new AnimationData(inventory, slotData);
         activeAnimations.put(playerId, data);
 
-
+        
         data.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             animateTick(playerId, data);
-        }, 1L, 2L);
+        }, 1L, 1L);
     }
 
     private void animateTick(UUID playerId, AnimationData data) {
-
         if (data.currentSlotIndex >= data.slots.size()) {
             stopAnimation(playerId);
             return;
@@ -85,15 +85,13 @@ public class CapturedMobsInventoryListener implements Listener {
 
         data.currentTick++;
 
-
         SlotData currentSlot = data.slots.get(data.currentSlotIndex);
         int currentCount = calculateCurrentCount(data.currentTick, currentSlot.targetCount);
 
-
         ItemStack stack = new ItemStack(currentSlot.material, Math.max(1, currentCount));
         ItemMeta meta = stack.getItemMeta();
-        meta.setMaxStackSize(99);
         if (meta != null) {
+            meta.setMaxStackSize(99);
             meta.setDisplayName(ChatColor.GOLD + currentSlot.type.name());
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.YELLOW + "Total: " + ChatColor.AQUA + currentSlot.total);
@@ -107,36 +105,76 @@ public class CapturedMobsInventoryListener implements Listener {
         }
         data.inventory.setItem(currentSlot.slot, stack);
 
-
         Player player = Bukkit.getPlayer(playerId);
         if (player != null && player.isOnline()) {
             try {
-                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 1.0f + (currentCount * 0.05f));
+                
+                if (currentCount > data.lastDisplayedCount) {
+                    
+                    int cappedTarget = Math.min(currentSlot.targetCount, 99);
+                    float ratio = cappedTarget <= 0 ? 0f : ((float) currentCount / (float) cappedTarget);
+                    float desiredPitch = 0.9f + Math.min(1.0f, ratio) * 0.6f; 
+
+                    
+                    float maxDelta = 0.15f;
+                    float delta = desiredPitch - data.previousPitch;
+                    if (delta > maxDelta) delta = maxDelta;
+                    if (delta < -maxDelta) delta = -maxDelta;
+                    float playPitch = data.previousPitch + delta;
+
+                    
+                    playPitch = Math.max(0.5f, Math.min(2.0f, playPitch));
+
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, playPitch);
+                    data.previousPitch = playPitch;
+                    data.lastDisplayedCount = currentCount;
+                }
             } catch (Exception ignored) {
             }
         }
 
-
-        if (currentCount >= currentSlot.targetCount) {
-
+        if (currentCount >= Math.min(currentSlot.targetCount, 99)) {
             data.currentSlotIndex++;
             data.currentTick = 0;
+            data.lastDisplayedCount = 0;
+            
+            data.previousPitch += (1.0f - data.previousPitch) * 0.6f;
+        }
+
+        
+        if (data.previousPitch != 1.0f) {
+            float decay = 0.2f;
+            data.previousPitch += (1.0f - data.previousPitch) * decay;
         }
     }
 
+    /**
+     * Calculate the displayed current count for the animation.
+     * Uses easeInOutQuint easing and caps the displayed value at 99.
+     */
     private int calculateCurrentCount(int tick, int targetCount) {
+        int animationDuration = 30; 
 
-        int animationDuration = 20;
+        int cappedTarget = Math.min(targetCount, 99);
 
         if (tick >= animationDuration) {
-            return targetCount;
+            return cappedTarget;
         }
 
+        double progress = (double) tick / animationDuration; 
+        double eased = easeInOutQuint(progress);
 
-        double progress = (double) tick / animationDuration;
-        progress = 1 - Math.pow(1 - progress, 3);
+        return (int) Math.ceil(cappedTarget * eased);
+    }
 
-        return (int) Math.ceil(targetCount * progress);
+    /**
+     * EaseInOutQuint easing function
+     *
+     * @param x progress value between 0 and 1
+     * @return eased value
+     */
+    private double easeInOutQuint(double x) {
+        return x < 0.5 ? 16.0 * Math.pow(x, 5) : 1.0 - Math.pow(-2.0 * x + 2.0, 5) / 2.0;
     }
 
     private void stopAnimation(UUID playerId) {
@@ -149,10 +187,7 @@ public class CapturedMobsInventoryListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         String title = event.getView().getTitle();
-
-
         if (title.contains("Captured - ")) {
-
             event.setCancelled(true);
         }
     }
@@ -160,10 +195,7 @@ public class CapturedMobsInventoryListener implements Listener {
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         String title = event.getView().getTitle();
-
-
         if (title.contains("Captured - ")) {
-
             event.setCancelled(true);
         }
     }

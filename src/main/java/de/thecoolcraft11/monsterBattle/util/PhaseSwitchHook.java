@@ -3,6 +3,7 @@ package de.thecoolcraft11.monsterBattle.util;
 import com.destroystokyo.paper.Title;
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
@@ -84,7 +85,7 @@ public class PhaseSwitchHook {
 
         plugin.getDataController().battlePhaseStarted(teams.stream().map(Team::getName).collect(Collectors.toSet()));
 
-        
+
         for (Team team : teams) {
             plugin.getBossbarController().initialize(team.getName());
         }
@@ -213,7 +214,7 @@ public class PhaseSwitchHook {
             for (String entry : team.getEntries()) {
                 Player p = Bukkit.getPlayerExact(entry);
                 if (p == null || !p.isOnline()) continue;
-                Location spawn = targetWorld.getHighestBlockAt(targetWorld.getSpawnLocation()).getLocation();
+                Location spawn = findValidSpawnFloor(targetWorld, targetWorld.getSpawnLocation().getBlockX(), targetWorld.getSpawnLocation().getBlockZ());
                 p.teleport(spawn);
                 if (setRespawn) {
                     try {
@@ -227,6 +228,28 @@ public class PhaseSwitchHook {
     }
 
 
+    public Location findValidSpawnFloor(World world, int x, int z) {
+        Block block = world.getHighestBlockAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
+        int y = block.getY();
+
+        while (y > world.getMinHeight()) {
+            Material mat = world.getBlockAt(x, y, z).getType();
+
+            if (mat == Material.BARRIER) {
+                y--;
+                continue;
+            }
+            if (!mat.isSolid()) {
+                y--;
+                continue;
+            }
+            break;
+        }
+
+        return new Location(world, x + 0.5, y + 1, z + 0.5);
+    }
+
+
     private void handleEnded(MonsterBattle plugin) {
         var dc = plugin.getDataController();
         Map<String, Long> finish = new LinkedHashMap<>(dc.getTeamFinishTimes());
@@ -234,7 +257,7 @@ public class PhaseSwitchHook {
         ordered.sort(Map.Entry.comparingByValue());
         String winner = ordered.isEmpty() ? null : ordered.getFirst().getKey();
 
-        
+
         ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager != null) {
             Set<Team> teams = manager.getMainScoreboard().getTeams();

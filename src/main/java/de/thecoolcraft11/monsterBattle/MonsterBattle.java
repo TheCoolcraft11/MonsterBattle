@@ -16,8 +16,13 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Team;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 public final class MonsterBattle extends JavaPlugin {
 
@@ -34,12 +39,12 @@ public final class MonsterBattle extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
 
-        
+
         if (getConfig().getBoolean("cleanup-on-reload.delete-bossbars-on-enable", true)) {
             bossbarController.removeAll();
         }
 
-        
+
         if (getConfig().getBoolean("cleanup-on-reload.remove-worlds-on-enable", false)) {
             cleanupGameWorlds();
         }
@@ -118,12 +123,12 @@ public final class MonsterBattle extends JavaPlugin {
         if (integrityScanTaskId != -1) Bukkit.getScheduler().cancelTask(integrityScanTaskId);
         releaseBattleChunks();
 
-        
+
         if (getConfig().getBoolean("cleanup-on-reload.delete-bossbars-on-disable", true)) {
             bossbarController.removeAll();
         }
 
-        
+
         if (getConfig().getBoolean("cleanup-on-reload.remove-worlds-on-disable", false)) {
             cleanupGameWorlds();
         }
@@ -314,6 +319,7 @@ public final class MonsterBattle extends JavaPlugin {
             return;
         }
 
+        
         for (World world : Bukkit.getWorlds()) {
             if (world == null) continue;
             String worldName = world.getName();
@@ -327,7 +333,7 @@ public final class MonsterBattle extends JavaPlugin {
             if (!isGameWorld) continue;
 
             try {
-                getLogger().info("[Cleanup] Removing world: " + worldName);
+                getLogger().info("[Cleanup] Removing loaded world: " + worldName);
 
                 
                 for (Player player : world.getPlayers()) {
@@ -340,20 +346,90 @@ public final class MonsterBattle extends JavaPlugin {
                 boolean unloaded = Bukkit.unloadWorld(world, false);
 
                 if (unloaded) {
-                    removed++;
                     getLogger().info("[Cleanup] Successfully unloaded world: " + worldName);
+
+                    
+                    File worldFolder = new File(Bukkit.getWorldContainer(), worldName);
+                    if (worldFolder.exists()) {
+                        boolean deleted = deleteWorldFolder(worldFolder);
+                        if (deleted) {
+                            getLogger().info("[Cleanup] Successfully deleted world folder: " + worldName);
+                            removed++;
+                        } else {
+                            getLogger().warning("[Cleanup] Failed to delete world folder: " + worldName);
+                        }
+                    }
                 } else {
                     getLogger().warning("[Cleanup] Failed to unload world: " + worldName);
                 }
             } catch (Exception e) {
-                getLogger().warning("[Cleanup] Error cleaning up world " + worldName + ": " + e.getMessage());
+                getLogger().warning("[Cleanup] Error cleaning up loaded world " + worldName + ": " + e.getMessage());
             }
+        }
+
+        
+        try {
+            File worldContainer = Bukkit.getWorldContainer();
+            File[] worldFolders = worldContainer.listFiles(File::isDirectory);
+
+            if (worldFolders != null) {
+                for (File worldFolder : worldFolders) {
+                    String worldName = worldFolder.getName();
+
+                    
+                    boolean isGameWorld = worldName.startsWith("Arena_") ||
+                            worldName.startsWith("Farm_") ||
+                            worldName.matches("Arena_.*_(nether|the_end)") ||
+                            worldName.matches("Farm_.*_(nether|the_end)");
+
+                    if (!isGameWorld) continue;
+
+                    
+                    World loadedWorld = Bukkit.getWorld(worldName);
+                    if (loadedWorld != null) continue; 
+
+                    try {
+                        getLogger().info("[Cleanup] Removing unloaded world folder: " + worldName);
+                        boolean deleted = deleteWorldFolder(worldFolder);
+                        if (deleted) {
+                            getLogger().info("[Cleanup] Successfully deleted unloaded world folder: " + worldName);
+                            removed++;
+                        } else {
+                            getLogger().warning("[Cleanup] Failed to delete unloaded world folder: " + worldName);
+                        }
+                    } catch (Exception e) {
+                        getLogger().warning("[Cleanup] Error cleaning up unloaded world folder " + worldName + ": " + e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            getLogger().warning("[Cleanup] Error scanning for unloaded world folders: " + e.getMessage());
         }
 
         if (removed > 0) {
             getLogger().info("[Cleanup] Successfully cleaned up " + removed + " game worlds.");
         } else {
             getLogger().info("[Cleanup] No game worlds found to clean up.");
+        }
+    }
+
+    private boolean deleteWorldFolder(File worldFolder) {
+        try {
+            
+            try (Stream<Path> paths = Files.walk(worldFolder.toPath())) {
+                paths.sorted(Comparator.reverseOrder()) 
+                        .map(Path::toFile)
+                        .forEach(file -> {
+                            if (!file.delete()) {
+                                getLogger().warning("[Cleanup] Failed to delete: " + file.getAbsolutePath());
+                            }
+                        });
+            }
+            
+            return !worldFolder.exists();
+        } catch (Exception e) {
+            getLogger().warning("[Cleanup] Error during world folder deletion: " + e.getMessage());
+            return false;
         }
     }
 }

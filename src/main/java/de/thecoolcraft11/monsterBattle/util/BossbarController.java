@@ -60,13 +60,17 @@ public class BossbarController {
         String sanitizedTeam = team.toLowerCase().replaceAll("[^a-z0-9_-]", "_");
         BossBar bossBar = plugin.getServer().getBossBar(NamespacedKey.minecraft(BOSSBAR_ID + sanitizedTeam));
         if (bossBar != null) {
-            double progress = spawnedMobs > 0 ? Math.max(0.0, Math.min(1.0, mobsKilled / totalMobs)) : 1.0;
+            
+            
+            double progress = totalMobs > 0 ? Math.max(0.0, Math.min(1.0, (totalMobs - mobsKilled) / totalMobs)) : 0.0;
             bossBar.setProgress(progress);
 
-            int remaining = (int) (spawnedMobs - mobsKilled);
+            int remaining = (int) (totalMobs - mobsKilled);
+            int currentlyAlive = (int) (spawnedMobs - mobsKilled);
             int notSpawned = (int) (totalMobs - spawnedMobs);
-            String title = String.format("Killed: %d/%d • Remaining: %d • Not Spawned: %d",
-                    (int) mobsKilled, (int) totalMobs, remaining, notSpawned);
+            
+            String title = String.format("Remaining: %d/%d • Alive: %d • Not Spawned: %d",
+                    remaining, (int) totalMobs, currentlyAlive, notSpawned);
             bossBar.setTitle(title);
         } else {
             plugin.getLogger().warning("[BossBar] Could not find BossBar for team: " + team + " (sanitized: " + sanitizedTeam + ")");
@@ -77,7 +81,7 @@ public class BossbarController {
         String sanitizedTeam = team.toLowerCase().replaceAll("[^a-z0-9_-]", "_");
         BossBar bossBar = plugin.getServer().getBossBar(NamespacedKey.minecraft(BOSSBAR_ID + sanitizedTeam));
         if (bossBar != null) {
-            bossBar.setProgress(1.0);
+            bossBar.setProgress(0.0); 
             bossBar.setColor(BarColor.GREEN);
             String title = String.format("All mobs defeated! Time: %.2f s", time / 1000.0);
             bossBar.setTitle(title);
@@ -105,7 +109,7 @@ public class BossbarController {
             try {
                 plugin.getServer().removeBossBar(NamespacedKey.minecraft(BOSSBAR_ID + sanitizedTeam));
             } catch (Exception e) {
-                
+
             }
         }
     }
@@ -119,7 +123,7 @@ public class BossbarController {
             }
         }
 
-        
+
         try {
             var iterator = plugin.getServer().getBossBars();
             while (iterator.hasNext()) {
