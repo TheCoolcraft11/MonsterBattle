@@ -7,6 +7,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.scoreboard.ScoreboardManager;
@@ -23,7 +24,7 @@ public class BattleMobDeathListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDeath(EntityDeathEvent event) {
         if (plugin.getDataController().getGameState() != GameState.BATTLE) return;
         LivingEntity living = event.getEntity();
@@ -31,6 +32,13 @@ public class BattleMobDeathListener implements Listener {
         String team = dc.getTeamForMonster(living.getUniqueId());
         if (team == null) return;
         dc.registerMonsterDeath(living.getUniqueId());
+
+        
+        int killTimeReduction = plugin.getConfig().getInt("monster-spawner.kill-time-reduction-ticks", 20);
+        if (killTimeReduction > 0) {
+            plugin.getMonsterSpawner().reduceSpawnTimer(team, killTimeReduction);
+        }
+
         int remaining = dc.getRemainingForTeam(team);
 
         boolean showRemaining = plugin.getConfig().getBoolean("battle-remaining-on-kill", true);
@@ -39,7 +47,7 @@ public class BattleMobDeathListener implements Listener {
         ScoreboardManager sm = plugin.getServer().getScoreboardManager();
         Team t = sm.getMainScoreboard().getTeam(team);
 
-        
+
         boolean hasWaitingMobs = hasWaitingMobsForTeam(dc, sm, team);
 
         if (t != null) {
@@ -51,7 +59,7 @@ public class BattleMobDeathListener implements Listener {
                         p.sendMessage(ChatColor.AQUA + "Remaining arena mobs: " + ChatColor.YELLOW + remaining);
                     }
                 } else if (!hasWaitingMobs && privateFinish) {
-                    
+
                     long ms = dc.getTeamFinishTimes().getOrDefault(team, 0L);
                     double seconds = ms / 1000.0;
                     p.sendMessage(ChatColor.GOLD + "All arena mobs defeated!" + ChatColor.GRAY + " (" + String.format("%.2f s", seconds) + ")");
@@ -60,10 +68,10 @@ public class BattleMobDeathListener implements Listener {
             }
         }
 
-        
+
         updateBossbarForTeam(team);
 
-        
+
         if (remaining == 0 && !hasWaitingMobs && dc.isTeamFinished(team)) {
             long ms = dc.getTeamFinishTimes().getOrDefault(team, 0L);
             plugin.getBossbarController().finish(team, ms);
@@ -94,17 +102,16 @@ public class BattleMobDeathListener implements Listener {
         if (thisTeam == null) return;
         allTeams.remove(thisTeam);
 
-        
+
         int totalMobs = 0;
         for (Team team : allTeams) {
             totalMobs += dc.getCapturedTotal(team.getName());
         }
 
-        
+
         int spawnedMobs = dc.getRemainingForTeam(teamName);
 
-        
-        
+
         int waitingToSpawn = 0;
         for (Team team : allTeams) {
             waitingToSpawn += dc.getKillsForTeam(team.getName()).size();

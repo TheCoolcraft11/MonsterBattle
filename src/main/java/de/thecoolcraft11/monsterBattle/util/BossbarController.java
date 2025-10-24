@@ -21,6 +21,7 @@ public class BossbarController {
 
     public void initialize(String team) {
         try {
+            cleanup(team);
             String sanitizedTeam = team.toLowerCase().replaceAll("[^a-z0-9_-]", "_");
             plugin.getLogger().info("[BossBar] Initializing BossBar for team: " + team + " (sanitized: " + sanitizedTeam + ")");
 
@@ -60,15 +61,15 @@ public class BossbarController {
         String sanitizedTeam = team.toLowerCase().replaceAll("[^a-z0-9_-]", "_");
         BossBar bossBar = plugin.getServer().getBossBar(NamespacedKey.minecraft(BOSSBAR_ID + sanitizedTeam));
         if (bossBar != null) {
-            
-            
+
+
             double progress = totalMobs > 0 ? Math.max(0.0, Math.min(1.0, (totalMobs - mobsKilled) / totalMobs)) : 0.0;
             bossBar.setProgress(progress);
 
             int remaining = (int) (totalMobs - mobsKilled);
             int currentlyAlive = (int) (spawnedMobs - mobsKilled);
             int notSpawned = (int) (totalMobs - spawnedMobs);
-            
+
             String title = String.format("Remaining: %d/%d • Alive: %d • Not Spawned: %d",
                     remaining, (int) totalMobs, currentlyAlive, notSpawned);
             bossBar.setTitle(title);
@@ -81,7 +82,7 @@ public class BossbarController {
         String sanitizedTeam = team.toLowerCase().replaceAll("[^a-z0-9_-]", "_");
         BossBar bossBar = plugin.getServer().getBossBar(NamespacedKey.minecraft(BOSSBAR_ID + sanitizedTeam));
         if (bossBar != null) {
-            bossBar.setProgress(0.0); 
+            bossBar.setProgress(0.0);
             bossBar.setColor(BarColor.GREEN);
             String title = String.format("All mobs defeated! Time: %.2f s", time / 1000.0);
             bossBar.setTitle(title);
@@ -108,7 +109,7 @@ public class BossbarController {
             bossBar.removeAll();
             try {
                 plugin.getServer().removeBossBar(NamespacedKey.minecraft(BOSSBAR_ID + sanitizedTeam));
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
         }
@@ -117,10 +118,8 @@ public class BossbarController {
     public void removeAll() {
         plugin.getLogger().info("[BossBar] Removing all boss bars...");
         var scoreboardManager = plugin.getServer().getScoreboardManager();
-        if (scoreboardManager != null) {
-            for (Team team : scoreboardManager.getMainScoreboard().getTeams()) {
-                cleanup(team.getName());
-            }
+        for (Team team : scoreboardManager.getMainScoreboard().getTeams()) {
+            cleanup(team.getName());
         }
 
 

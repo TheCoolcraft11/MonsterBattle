@@ -3,6 +3,7 @@ package de.thecoolcraft11.monsterBattle.command;
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.GameState;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -43,12 +44,16 @@ public class SetPhaseCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
         }
+        if (newState == GameState.FARMING && !checkSetupComplete(sender)) {
+            return true;
+        }
         if (old == newState) {
             sender.sendMessage("Game is already in phase: " + newState.name());
             return true;
         }
         if (old == GameState.BATTLE) {
             plugin.releaseBattleChunks();
+            plugin.getMonsterSpawner().cancelAllSpawners();
         }
         plugin.getDataController().setGameState(newState);
 
@@ -66,5 +71,28 @@ public class SetPhaseCommand implements CommandExecutor, TabCompleter {
             return PHASES.stream().filter(p -> p.startsWith(prefix)).collect(Collectors.toList());
         }
         return new ArrayList<>();
+    }
+
+    private boolean checkSetupComplete(CommandSender sender) {
+        if (plugin.getDataController().getMonsterSpawns().isEmpty()) {
+            sender.sendMessage("Monster spawns are not configured yet. Please complete the setup first.");
+            return false;
+        }
+        if (Bukkit.getServer().getScoreboardManager().getMainScoreboard().getTeams().size() != 2) {
+            if (Bukkit.getServer().getScoreboardManager().getMainScoreboard().getTeams().size() < 2) {
+                sender.sendMessage("Not enough teams are configured yet. Please complete the setup first.");
+                return false;
+            } else if (Bukkit.getServer().getScoreboardManager().getMainScoreboard().getTeams().size() > 2) {
+                sender.sendMessage("Too many teams are configured. The maximum allowed is 4.");
+                return false;
+            }
+            return false;
+        }
+        World arena = Bukkit.getWorld(plugin.getConfig().getString("arena-template-world", "Arena"));
+        if (arena == null) {
+            sender.sendMessage("Arena world is not configured yet. Please complete the setup first.");
+            return false;
+        }
+        return true;
     }
 }

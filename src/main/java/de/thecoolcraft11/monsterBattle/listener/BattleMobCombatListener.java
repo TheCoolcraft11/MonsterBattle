@@ -7,6 +7,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 
 public class BattleMobCombatListener implements Listener {
@@ -46,16 +47,62 @@ public class BattleMobCombatListener implements Listener {
         boolean victimTracked = isTrackedBattleMob(victim);
 
         if (victim instanceof Ghast) return;
+
+        
         if (damager instanceof Player) return;
 
+        
+        if (victimTracked && (damager instanceof TNTPrimed ||
+                damager instanceof EnderCrystal ||
+                damager instanceof Projectile ||
+                damager instanceof FallingBlock)) {
+            return;
+        }
+
+        
+        if (victimTracked && damagerTracked) {
+            EntityDamageEvent.DamageCause cause = event.getCause();
+            if (cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+                return;
+            }
+        }
+
+        
         if (damagerTracked && !(victim instanceof Player)) {
             event.setCancelled(true);
             retargetClosestPlayer(damager);
             return;
         }
+
+        
         if (victimTracked) {
             event.setCancelled(true);
             retargetClosestPlayer(victim);
+        }
+    }
+
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDamage(EntityDamageEvent event) {
+        
+        if (isTrackedBattleMob(event.getEntity())) {
+            EntityDamageEvent.DamageCause cause = event.getCause();
+            
+            if (cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
+                    cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION ||
+                    cause == EntityDamageEvent.DamageCause.CONTACT ||
+                    cause == EntityDamageEvent.DamageCause.FALL ||
+                    cause == EntityDamageEvent.DamageCause.FALLING_BLOCK ||
+                    cause == EntityDamageEvent.DamageCause.FIRE ||
+                    cause == EntityDamageEvent.DamageCause.FIRE_TICK ||
+                    cause == EntityDamageEvent.DamageCause.LAVA ||
+                    cause == EntityDamageEvent.DamageCause.LIGHTNING ||
+                    cause == EntityDamageEvent.DamageCause.MAGIC ||
+                    cause == EntityDamageEvent.DamageCause.POISON ||
+                    cause == EntityDamageEvent.DamageCause.WITHER) {
+                
+                return;
+            }
         }
     }
 

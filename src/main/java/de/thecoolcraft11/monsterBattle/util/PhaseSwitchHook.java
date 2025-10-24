@@ -3,6 +3,7 @@ package de.thecoolcraft11.monsterBattle.util;
 import com.destroystokyo.paper.Title;
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.ScoreboardManager;
@@ -61,6 +62,8 @@ public class PhaseSwitchHook {
                 if (p == null || !p.isOnline()) continue;
                 Location spawn = world.getSpawnLocation();
                 p.teleport(spawn);
+                resetPlayerStats(p);
+                resetPlayerInv(p);
                 if (setFarmRespawn) {
                     try {
                         p.setRespawnLocation(spawn, true);
@@ -104,6 +107,7 @@ public class PhaseSwitchHook {
             World fallback = Bukkit.getWorlds().get(0);
             for (Player p : new ArrayList<>(template.getPlayers())) {
                 p.teleport(fallback.getSpawnLocation());
+                resetPlayerStats(p);
                 p.sendMessage(ChatColor.YELLOW + "Arena template resetting, you were moved.");
             }
         }
@@ -173,7 +177,7 @@ public class PhaseSwitchHook {
         if (countdown < 0) countdown = 0;
         if (countdown == 0) {
             Bukkit.broadcastMessage(ChatColor.GREEN + "Battle started! Spawners active.");
-            for (Team t : teams) new MonsterSpawner().start(plugin, t.getName());
+            for (Team t : teams) plugin.getMonsterSpawner().start(plugin, t.getName());
             return;
         }
         final int total = countdown;
@@ -191,7 +195,7 @@ public class PhaseSwitchHook {
                     }
                 } else {
                     Bukkit.broadcastMessage(ChatColor.GREEN + "Battle started! Spawners active.");
-                    for (Team t : teams) new MonsterSpawner().start(plugin, t.getName());
+                    for (Team t : teams) plugin.getMonsterSpawner().start(plugin, t.getName());
                 }
             }, delay);
         }
@@ -384,6 +388,23 @@ public class PhaseSwitchHook {
         Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
     }
 
+    private void resetPlayerStats(Player player) {
+        player.setHealth(Objects.requireNonNull(player.getAttribute(Attribute.MAX_HEALTH)).getDefaultValue());
+        player.setFoodLevel(20);
+        player.setSaturation(5.0f);
+        player.setExhaustion(0.0f);
+        player.setFireTicks(0);
+        player.getActivePotionEffects().forEach(effect -> player.removePotionEffect(effect.getType()));
+    }
+
+    private void resetPlayerInv(Player player) {
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(null);
+        player.getInventory().setExtraContents(null);
+        player.updateInventory();
+        player.setTotalExperience(0);
+        player.setLevel(0);
+    }
 
     private String sanitizeWorldName(String raw) {
         return raw.replaceAll("[^A-Za-z0-9_-]", "_");

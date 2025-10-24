@@ -23,6 +23,12 @@ monster-spawner:
   persist-battle-mobs: true
   # If true, potion effects of spawned battle mobs are infinite duration
   infinite-potion-effects: true
+  # Maximum number of active mobs allowed in each arena at once (-1 = unlimited)
+  # Spawner will pause if this limit is reached until mob count drops
+  max-active-mobs: 50
+  # Ticks to reduce from spawn timer when a mob is killed (20 ticks = 1 second)
+  # Set to 0 to disable this feature
+  kill-time-reduction-ticks: 20
 
 # Battle maintenance task: cleans up dead/despawned tracked mobs & retargets idle ones
 battle-maintenance:

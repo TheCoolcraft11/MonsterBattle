@@ -29,6 +29,7 @@ public final class MonsterBattle extends JavaPlugin {
     private final DataController dataController = new DataController();
     private final PhaseSwitchHook phaseSwitchHook = new PhaseSwitchHook();
     private final BossbarController bossbarController = new BossbarController(this);
+    private final de.thecoolcraft11.monsterBattle.util.MonsterSpawner monsterSpawner = new de.thecoolcraft11.monsterBattle.util.MonsterSpawner();
     private int maintenanceTaskId = -1;
     private int chunkRefreshTaskId = -1;
     private int integrityScanTaskId = -1;
@@ -96,6 +97,8 @@ public final class MonsterBattle extends JavaPlugin {
         arenaBlockProtectionListener = new ArenaBlockProtectionListener(this);
         getServer().getPluginManager().registerEvents(arenaBlockProtectionListener, this);
 
+        getServer().getPluginManager().registerEvents(new ArenaControllerListener(), this);
+
         getServer().getPluginManager().registerEvents(new PhaseRespawnListener(this), this);
 
         boolean enableMaint = getConfig().getBoolean("battle-maintenance.enabled", true);
@@ -146,6 +149,10 @@ public final class MonsterBattle extends JavaPlugin {
 
     public BossbarController getBossbarController() {
         return bossbarController;
+    }
+
+    public de.thecoolcraft11.monsterBattle.util.MonsterSpawner getMonsterSpawner() {
+        return monsterSpawner;
     }
 
     public CapturedMobsInventoryListener getCapturedMobsInventoryListener() {
@@ -312,19 +319,19 @@ public final class MonsterBattle extends JavaPlugin {
         getLogger().info("[Cleanup] Starting world cleanup...");
         int removed = 0;
 
-        
+
         World mainWorld = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
         if (mainWorld == null) {
             getLogger().warning("[Cleanup] Cannot find main world for teleporting players!");
             return;
         }
 
-        
+
         for (World world : Bukkit.getWorlds()) {
             if (world == null) continue;
             String worldName = world.getName();
 
-            
+
             boolean isGameWorld = worldName.startsWith("Arena_") ||
                     worldName.startsWith("Farm_") ||
                     worldName.matches("Arena_.*_(nether|the_end)") ||
@@ -335,20 +342,20 @@ public final class MonsterBattle extends JavaPlugin {
             try {
                 getLogger().info("[Cleanup] Removing loaded world: " + worldName);
 
-                
+
                 for (Player player : world.getPlayers()) {
                     player.teleport(mainWorld.getSpawnLocation());
                     player.sendMessage("§eYou were teleported because the world " + worldName + " is being cleaned up.");
                 }
 
-                
+
                 world.save();
                 boolean unloaded = Bukkit.unloadWorld(world, false);
 
                 if (unloaded) {
                     getLogger().info("[Cleanup] Successfully unloaded world: " + worldName);
 
-                    
+
                     File worldFolder = new File(Bukkit.getWorldContainer(), worldName);
                     if (worldFolder.exists()) {
                         boolean deleted = deleteWorldFolder(worldFolder);
@@ -367,7 +374,7 @@ public final class MonsterBattle extends JavaPlugin {
             }
         }
 
-        
+
         try {
             File worldContainer = Bukkit.getWorldContainer();
             File[] worldFolders = worldContainer.listFiles(File::isDirectory);
@@ -376,7 +383,7 @@ public final class MonsterBattle extends JavaPlugin {
                 for (File worldFolder : worldFolders) {
                     String worldName = worldFolder.getName();
 
-                    
+
                     boolean isGameWorld = worldName.startsWith("Arena_") ||
                             worldName.startsWith("Farm_") ||
                             worldName.matches("Arena_.*_(nether|the_end)") ||
@@ -384,9 +391,9 @@ public final class MonsterBattle extends JavaPlugin {
 
                     if (!isGameWorld) continue;
 
-                    
+
                     World loadedWorld = Bukkit.getWorld(worldName);
-                    if (loadedWorld != null) continue; 
+                    if (loadedWorld != null) continue;
 
                     try {
                         getLogger().info("[Cleanup] Removing unloaded world folder: " + worldName);
@@ -415,9 +422,9 @@ public final class MonsterBattle extends JavaPlugin {
 
     private boolean deleteWorldFolder(File worldFolder) {
         try {
-            
+
             try (Stream<Path> paths = Files.walk(worldFolder.toPath())) {
-                paths.sorted(Comparator.reverseOrder()) 
+                paths.sorted(Comparator.reverseOrder())
                         .map(Path::toFile)
                         .forEach(file -> {
                             if (!file.delete()) {
@@ -425,7 +432,7 @@ public final class MonsterBattle extends JavaPlugin {
                             }
                         });
             }
-            
+
             return !worldFolder.exists();
         } catch (Exception e) {
             getLogger().warning("[Cleanup] Error during world folder deletion: " + e.getMessage());

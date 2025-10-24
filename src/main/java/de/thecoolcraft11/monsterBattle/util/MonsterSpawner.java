@@ -17,6 +17,10 @@ import java.util.*;
 
 public class MonsterSpawner {
 
+    private final Map<String, BukkitRunnable> activeSpawners = new HashMap<>();
+    private final Map<String, Long> nextSpawnTicks = new HashMap<>();
+    private final Map<String, Integer> baseIntervals = new HashMap<>();
+
     public void start(MonsterBattle plugin, String currentTeam) {
         System.out.println("[MonsterSpawner] Starting for team: " + currentTeam);
 
@@ -25,10 +29,37 @@ public class MonsterSpawner {
         int interval = plugin.getConfig().getInt("monster-spawner.tick-interval", 60);
         if (interval <= 0) interval = 60;
 
+        final int baseInterval = interval;
+        baseIntervals.put(currentTeam, baseInterval);
+        nextSpawnTicks.put(currentTeam, 0L);
+
         BukkitRunnable runnable = new BukkitRunnable() {
+            private long tickCounter = 0;
+
             @Override
             public void run() {
                 try {
+                    tickCounter++;
+
+
+                    Long nextSpawn = nextSpawnTicks.get(currentTeam);
+                    if (nextSpawn == null || tickCounter < nextSpawn) {
+                        return;
+                    }
+
+
+                    int currentInterval = baseIntervals.getOrDefault(currentTeam, baseInterval);
+                    nextSpawnTicks.put(currentTeam, tickCounter + currentInterval);
+
+
+                    int maxActiveMobs = plugin.getConfig().getInt("monster-spawner.max-active-mobs", -1);
+                    if (maxActiveMobs > 0) {
+                        int currentActive = plugin.getDataController().getRemainingForTeam(currentTeam);
+                        if (currentActive >= maxActiveMobs) {
+
+                            return;
+                        }
+                    }
                     var sbManager = plugin.getServer().getScoreboardManager();
                     Set<Team> all = new HashSet<>(sbManager.getMainScoreboard().getTeams());
                     Team thisTeam = sbManager.getMainScoreboard().getTeam(currentTeam);
@@ -117,7 +148,7 @@ public class MonsterSpawner {
                         }
                     }
 
-                    
+
                     if (spawnedThisCycle > 0) {
                         updateBossbarForTeam(plugin, currentTeam);
                     }
@@ -128,7 +159,8 @@ public class MonsterSpawner {
                 }
             }
         };
-        runnable.runTaskTimer(plugin, 0L, interval);
+        activeSpawners.put(currentTeam, runnable);
+        runnable.runTaskTimer(plugin, 0L, 1L);
     }
 
     private void applyPostSpawnEffects(MonsterBattle plugin, Team targetTeam, LivingEntity le) {
@@ -223,6 +255,41 @@ public class MonsterSpawner {
         return raw.replaceAll("[^A-Za-z0-9_-]", "_");
     }
 
+
+    public void reduceSpawnTimer(String team, long reductionTicks) {
+        Long nextSpawn = nextSpawnTicks.get(team);
+        if (nextSpawn != null && reductionTicks > 0) {
+
+            nextSpawnTicks.put(team, Math.max(0, nextSpawn - reductionTicks));
+        }
+    }
+
+
+    public void cancelSpawner(String team) {
+        BukkitRunnable runnable = activeSpawners.remove(team);
+        if (runnable != null) {
+            try {
+                runnable.cancel();
+            } catch (Exception ignored) {
+            }
+        }
+        nextSpawnTicks.remove(team);
+        baseIntervals.remove(team);
+    }
+
+
+    public void cancelAllSpawners() {
+        for (BukkitRunnable runnable : activeSpawners.values()) {
+            try {
+                runnable.cancel();
+            } catch (Exception ignored) {
+            }
+        }
+        activeSpawners.clear();
+        nextSpawnTicks.clear();
+        baseIntervals.clear();
+    }
+
     private void updateBossbarForTeam(MonsterBattle plugin, String teamName) {
         var dc = plugin.getDataController();
         var sbManager = plugin.getServer().getScoreboardManager();
@@ -233,17 +300,16 @@ public class MonsterSpawner {
         if (thisTeam == null) return;
         allTeams.remove(thisTeam);
 
-        
+
         int totalMobs = 0;
         for (Team t : allTeams) {
             totalMobs += dc.getCapturedTotal(t.getName());
         }
 
-        
+
         int spawnedMobs = dc.getRemainingForTeam(teamName);
 
-        
-        
+
         int waitingToSpawn = 0;
         for (Team t : allTeams) {
             waitingToSpawn += dc.getKillsForTeam(t.getName()).size();
