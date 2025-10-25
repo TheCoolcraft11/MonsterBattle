@@ -59,7 +59,8 @@ public class SetPhaseCommand implements CommandExecutor, TabCompleter {
 
         plugin.getPhaseSwitchHook().newPhase(plugin, newState);
 
-        Bukkit.getServer().broadcast("Game phase changed to: " + newState.name(), "monsterbattle.notify");
+        plugin.getLogger().info("Game phase changed to: " + newState.name());
+        Bukkit.getServer().broadcast("§6[MonsterBattle] §eGame phase changed to: §b" + newState.name(), "monsterbattle.admin");
         return true;
     }
 

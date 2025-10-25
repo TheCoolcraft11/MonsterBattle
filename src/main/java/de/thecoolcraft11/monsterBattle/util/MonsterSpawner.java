@@ -22,7 +22,7 @@ public class MonsterSpawner {
     private final Map<String, Integer> baseIntervals = new HashMap<>();
 
     public void start(MonsterBattle plugin, String currentTeam) {
-        System.out.println("[MonsterSpawner] Starting for team: " + currentTeam);
+        plugin.getLogger().info("Starting MonsterSpawner for team: " + currentTeam);
 
         final boolean spawnAll = plugin.getConfig().getBoolean("monster-spawner.spawn-all-on-cycle", false);
         final int configuredMax = plugin.getConfig().getInt("monster-spawner.max-spawn-per-cycle", -1);
@@ -105,7 +105,7 @@ public class MonsterSpawner {
                             }
                         }
                         if (spawnedThisCycle > 0) {
-                            System.out.println("[MonsterSpawner] Spawned ALL pending " + spawnedThisCycle + " mobs for team " + currentTeam);
+                            plugin.getLogger().info("Spawned ALL pending " + spawnedThisCycle + " mobs for team " + currentTeam);
                         }
                     } else {
                         int baseCapacity = spawnPoints.size();
@@ -134,7 +134,7 @@ public class MonsterSpawner {
                             }
                         }
                         if (spawnedThisCycle > 0) {
-                            System.out.println("[MonsterSpawner] Spawned " + spawnedThisCycle + " mobs (limited cycle) for team " + currentTeam);
+                            plugin.getLogger().info("Spawned " + spawnedThisCycle + " mobs (limited cycle) for team " + currentTeam);
                         }
                     }
 
@@ -153,8 +153,10 @@ public class MonsterSpawner {
                         updateBossbarForTeam(plugin, currentTeam);
                     }
                 } catch (Exception ex) {
-                    System.err.println("[MonsterSpawner] Error while spawning for team " + currentTeam + ": " + ex.getMessage());
-                    ex.printStackTrace();
+                    plugin.getLogger().severe("Error while spawning for team " + currentTeam + ": " + ex.getMessage());
+                    for (StackTraceElement element : ex.getStackTrace()) {
+                        plugin.getLogger().severe("    at " + element.toString());
+                    }
                     cancel();
                 }
             }
@@ -293,7 +295,6 @@ public class MonsterSpawner {
     private void updateBossbarForTeam(MonsterBattle plugin, String teamName) {
         var dc = plugin.getDataController();
         var sbManager = plugin.getServer().getScoreboardManager();
-        if (sbManager == null) return;
 
         Set<Team> allTeams = new HashSet<>(sbManager.getMainScoreboard().getTeams());
         Team thisTeam = sbManager.getMainScoreboard().getTeam(teamName);
