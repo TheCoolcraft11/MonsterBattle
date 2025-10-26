@@ -4,8 +4,9 @@ import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.listener.CapturedMobsInventoryListener;
 import de.thecoolcraft11.monsterBattle.util.GameState;
 import de.thecoolcraft11.monsterBattle.util.MobSnapshot;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -33,14 +34,14 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Only players can use this command.");
+            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
             return true;
         }
 
         if (plugin.getDataController().getGameState() == GameState.LOBBY || plugin.getDataController().getGameState() == GameState.BATTLE) {
-            player.sendMessage(ChatColor.RED + "You cannot view captured mobs while in the " + (plugin.getDataController().getGameState() == GameState.LOBBY ? "lobby" : "battle") + " phase.");
+            player.sendMessage(Component.text("You cannot view captured mobs while in the " + (plugin.getDataController().getGameState() == GameState.LOBBY ? "lobby" : "battle") + " phase.", NamedTextColor.RED));
             return true;
         }
 
@@ -50,7 +51,7 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
                 String targetTeamName = args.length > 0 ? args[0] : null;
 
                 if (targetTeamName == null) {
-                    player.sendMessage(ChatColor.RED + "Usage: /capturedmobs <team> - Opens the result screen for all players");
+                    player.sendMessage(Component.text("Usage: /capturedmobs <team> - Opens the result screen for all players", NamedTextColor.RED));
                     return true;
                 }
 
@@ -58,14 +59,16 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
                 ScoreboardManager sm = Bukkit.getScoreboardManager();
                 Team team = sm.getMainScoreboard().getTeam(targetTeamName);
                 if (team == null) {
-                    player.sendMessage(ChatColor.RED + "Team '" + targetTeamName + "' does not exist.");
+                    player.sendMessage(Component.text("Team '" + targetTeamName + "' does not exist.", NamedTextColor.RED));
                     return true;
                 }
 
 
                 List<MobSnapshot> kills = plugin.getDataController().getCapturedMobsForTeam(targetTeamName);
                 if (kills.isEmpty()) {
-                    player.sendMessage(ChatColor.YELLOW + "No captured mobs recorded for team " + ChatColor.GOLD + targetTeamName + ChatColor.YELLOW + ".");
+                    player.sendMessage(Component.text("No captured mobs recorded for team ", NamedTextColor.YELLOW)
+                            .append(Component.text(targetTeamName, NamedTextColor.GOLD))
+                            .append(Component.text(".", NamedTextColor.YELLOW)));
                     return true;
                 }
 
@@ -80,7 +83,7 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
                             if (cmp != 0) return cmp;
                             return a.getKey().name().compareToIgnoreCase(b.getKey().name());
                         })
-                        .collect(Collectors.toList());
+                        .toList();
 
                 int size = Math.min(54, ((sorted.size() - 1) / 9 + 1) * 9);
                 if (size <= 0) size = 9;
@@ -112,20 +115,24 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
                 CapturedMobsInventoryListener listener = plugin.getCapturedMobsInventoryListener();
 
                 for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                    Inventory inv = Bukkit.createInventory(null, size, ChatColor.DARK_GREEN + "Captured - " + targetTeamName);
+                    Inventory inv = Bukkit.createInventory(null, size, Component.text("Captured - " + targetTeamName, NamedTextColor.DARK_GREEN));
 
                     if (sorted.size() > inv.getSize()) {
                         ItemStack overflow = new ItemStack(Material.BARRIER);
                         var meta = overflow.getItemMeta();
                         if (meta != null) {
-                            meta.setDisplayName(ChatColor.RED + "+" + (sorted.size() - inv.getSize()) + " more types...");
+                            meta.displayName(Component.text("+" + (sorted.size() - inv.getSize()) + " more types...", NamedTextColor.RED));
                             overflow.setItemMeta(meta);
                         }
                         inv.setItem(inv.getSize() - 1, overflow);
                     }
 
                     onlinePlayer.openInventory(inv);
-                    onlinePlayer.sendMessage(ChatColor.GREEN + "Results for team " + ChatColor.GOLD + targetTeamName + ChatColor.GREEN + ": " + ChatColor.AQUA + total + ChatColor.GREEN + " total captured");
+                    onlinePlayer.sendMessage(Component.text("Results for team ", NamedTextColor.GREEN)
+                            .append(Component.text(targetTeamName, NamedTextColor.GOLD))
+                            .append(Component.text(": ", NamedTextColor.GREEN))
+                            .append(Component.text(total, NamedTextColor.AQUA))
+                            .append(Component.text(" total captured", NamedTextColor.GREEN)));
 
                     if (listener != null) {
                         listener.startAnimation(onlinePlayer, inv, animationSlots);
@@ -134,30 +141,33 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
                     playersShown++;
                 }
 
-                player.sendMessage(ChatColor.GREEN + "Opened result screen for " + ChatColor.GOLD + playersShown + ChatColor.GREEN + " players.");
-                return true;
+                player.sendMessage(Component.text("Opened result screen for ", NamedTextColor.GREEN)
+                        .append(Component.text(playersShown, NamedTextColor.GOLD))
+                        .append(Component.text(" players.", NamedTextColor.GREEN)));
             } else {
 
-                player.sendMessage(ChatColor.RED + "You cannot view captured mobs in this phase.");
-                return true;
+                player.sendMessage(Component.text("You cannot view captured mobs in this phase.", NamedTextColor.RED));
             }
+            return true;
         }
 
 
         String playerTeam = findPlayerTeam(player.getName());
         String targetTeamName = args.length > 0 ? args[0] : playerTeam;
         if (targetTeamName == null) {
-            player.sendMessage(ChatColor.RED + "Team not found. Provide a team name or join a team first.");
+            player.sendMessage(Component.text("Team not found. Provide a team name or join a team first.", NamedTextColor.RED));
             return true;
         }
         if (args.length > 0 && !player.hasPermission("monsterbattle.captured.others") && (playerTeam == null || !playerTeam.equalsIgnoreCase(targetTeamName))) {
-            player.sendMessage(ChatColor.RED + "You don't have permission to view other teams' captures.");
+            player.sendMessage(Component.text("You don't have permission to view other teams' captures.", NamedTextColor.RED));
             return true;
         }
 
         List<MobSnapshot> kills = plugin.getDataController().getCapturedMobsForTeam(targetTeamName);
         if (kills.isEmpty()) {
-            player.sendMessage(ChatColor.YELLOW + "No captured mobs recorded for team " + ChatColor.GOLD + targetTeamName + ChatColor.YELLOW + ".");
+            player.sendMessage(Component.text("No captured mobs recorded for team ", NamedTextColor.YELLOW)
+                    .append(Component.text(targetTeamName, NamedTextColor.GOLD))
+                    .append(Component.text(".", NamedTextColor.YELLOW)));
             return true;
         }
 
@@ -171,11 +181,11 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
                     if (cmp != 0) return cmp;
                     return a.getKey().name().compareToIgnoreCase(b.getKey().name());
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         int size = Math.min(54, ((sorted.size() - 1) / 9 + 1) * 9);
         if (size <= 0) size = 9;
-        Inventory inv = Bukkit.createInventory(null, size, ChatColor.DARK_GREEN + "Captured - " + targetTeamName);
+        Inventory inv = Bukkit.createInventory(null, size, Component.text("Captured - " + targetTeamName, NamedTextColor.DARK_GREEN));
 
 
         List<CapturedMobsInventoryListener.SlotData> animationSlots = new ArrayList<>();
@@ -206,14 +216,18 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
             ItemStack overflow = new ItemStack(Material.BARRIER);
             var meta = overflow.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(ChatColor.RED + "+" + (sorted.size() - inv.getSize()) + " more types...");
+                meta.displayName(Component.text("+" + (sorted.size() - inv.getSize()) + " more types...", NamedTextColor.RED));
                 overflow.setItemMeta(meta);
             }
             inv.setItem(inv.getSize() - 1, overflow);
         }
 
         player.openInventory(inv);
-        player.sendMessage(ChatColor.GREEN + "Showing captured mobs for team " + ChatColor.GOLD + targetTeamName + ChatColor.GREEN + ": " + ChatColor.AQUA + total + ChatColor.GREEN + " total");
+        player.sendMessage(Component.text("Showing captured mobs for team ", NamedTextColor.GREEN)
+                .append(Component.text(targetTeamName, NamedTextColor.GOLD))
+                .append(Component.text(": ", NamedTextColor.GREEN))
+                .append(Component.text(total, NamedTextColor.AQUA))
+                .append(Component.text(" total", NamedTextColor.GREEN)));
 
 
         CapturedMobsInventoryListener listener = plugin.getCapturedMobsInventoryListener();
@@ -227,7 +241,6 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
     @Nullable
     private String findPlayerTeam(String playerName) {
         ScoreboardManager sm = Bukkit.getScoreboardManager();
-        if (sm == null) return null;
         for (Team t : sm.getMainScoreboard().getTeams()) {
             if (t.getEntries().contains(playerName)) return t.getName();
         }
@@ -244,11 +257,10 @@ public class CapturedMobsCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+    public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String @NotNull [] args) {
         if (args.length == 1) {
             String prefix = args[0].toLowerCase(Locale.ROOT);
             ScoreboardManager sm = Bukkit.getScoreboardManager();
-            if (sm == null) return Collections.emptyList();
             return sm.getMainScoreboard().getTeams().stream()
                     .map(Team::getName)
                     .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(prefix))

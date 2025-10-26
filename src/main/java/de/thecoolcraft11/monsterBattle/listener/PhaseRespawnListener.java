@@ -2,6 +2,8 @@ package de.thecoolcraft11.monsterBattle.listener;
 
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.GameState;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -56,7 +58,10 @@ public class PhaseRespawnListener implements Listener {
 
         Location spawn = baseWorld.getSpawnLocation().add(0, 1, 0);
         event.setRespawnLocation(spawn);
-        player.sendMessage(ChatColor.GRAY + "Respawn redirected to phase world: " + ChatColor.GREEN + baseWorldName);
+        player.sendMessage(Component.text()
+                .append(Component.text("Respawn redirected to phase world: ", NamedTextColor.GRAY))
+                .append(Component.text(baseWorldName, NamedTextColor.GREEN))
+                .build());
     }
 
     private String sanitize(String raw) {

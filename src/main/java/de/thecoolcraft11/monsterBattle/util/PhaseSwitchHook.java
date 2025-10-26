@@ -1,11 +1,14 @@
 package de.thecoolcraft11.monsterBattle.util;
 
-import com.destroystokyo.paper.Title;
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
@@ -13,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -55,7 +59,7 @@ public class PhaseSwitchHook {
                         .createWorld();
             }
             if (world == null) continue;
-            createAuxDimensions(plugin, baseName, configuredSeed, null);
+            createAuxDimensions(plugin, baseName, configuredSeed);
 
             for (String entry : team.getEntries()) {
                 Player p = Bukkit.getPlayerExact(entry);
@@ -70,7 +74,12 @@ public class PhaseSwitchHook {
                     } catch (NoSuchMethodError ignored) {
                     }
                 }
-                p.sendMessage(ChatColor.GREEN + "Farming phase started: " + ChatColor.YELLOW + baseName + ChatColor.GRAY + " (seed: " + configuredSeed + ")" + (setFarmRespawn ? ChatColor.DARK_GRAY + " [respawn set]" : ""));
+                p.sendMessage(Component.text()
+                        .append(Component.text("Farming phase started: ", NamedTextColor.GREEN))
+                        .append(Component.text(baseName, NamedTextColor.YELLOW))
+                        .append(Component.text(" (seed: " + configuredSeed + ")", NamedTextColor.GRAY))
+                        .append(setFarmRespawn ? Component.text(" [respawn set]", NamedTextColor.DARK_GRAY) : Component.empty())
+                        .build());
             }
         }
     }
@@ -82,7 +91,6 @@ public class PhaseSwitchHook {
             return;
         }
         ScoreboardManager manager = Bukkit.getScoreboardManager();
-        if (manager == null) return;
         Set<Team> teams = manager.getMainScoreboard().getTeams();
         if (teams.isEmpty()) return;
 
@@ -96,7 +104,6 @@ public class PhaseSwitchHook {
         plugin.notifyBattleStarted();
 
         String templateName = plugin.getConfig().getString("arena-template-world", "Arena");
-        boolean separateDims = plugin.getConfig().getBoolean("separate-dimensions", true);
         World template = Bukkit.getWorld(templateName);
         if (template == null) {
             plugin.getLogger().warning("Battle phase aborted: template world '" + templateName + "' is not loaded.");
@@ -104,11 +111,11 @@ public class PhaseSwitchHook {
         }
 
         if (!template.getPlayers().isEmpty()) {
-            World fallback = Bukkit.getWorlds().get(0);
+            World fallback = Bukkit.getWorlds().getFirst();
             for (Player p : new ArrayList<>(template.getPlayers())) {
                 p.teleport(fallback.getSpawnLocation());
                 resetPlayerStats(p);
-                p.sendMessage(ChatColor.YELLOW + "Arena template resetting, you were moved.");
+                p.sendMessage(Component.text("Arena template resetting, you were moved.", NamedTextColor.YELLOW));
             }
         }
 
@@ -134,12 +141,12 @@ public class PhaseSwitchHook {
         for (Team t : creationNeeded) {
             for (String entry : t.getEntries()) {
                 Player pl = Bukkit.getPlayerExact(entry);
-                if (pl != null) pl.sendMessage(ChatColor.GRAY + "Preparing your arena world...");
+                if (pl != null) pl.sendMessage(Component.text("Preparing your arena world...", NamedTextColor.GRAY));
             }
         }
 
         if (creationNeeded.isEmpty()) {
-            loadAndTeleportArenas(plugin, teams, separateDims);
+            loadAndTeleportArenas(plugin, teams);
             startBattleSpawnCountdown(plugin, teams);
             if (unloaded) new WorldCreator(templateName).createWorld();
             return;
@@ -164,7 +171,7 @@ public class PhaseSwitchHook {
             }
             Bukkit.getScheduler().runTask(plugin, () -> {
                 plugin.getLogger().info("Arena cloning complete. Created " + success.get() + " new arena worlds.");
-                loadAndTeleportArenas(plugin, teams, separateDims);
+                loadAndTeleportArenas(plugin, teams);
                 startBattleSpawnCountdown(plugin, teams);
                 if (unloaded) new WorldCreator(templateName).createWorld();
                 arenaCloneInProgress = false;
@@ -176,7 +183,7 @@ public class PhaseSwitchHook {
         int countdown = plugin.getConfig().getInt("battle-spawn-countdown-seconds", 20);
         if (countdown < 0) countdown = 0;
         if (countdown == 0) {
-            Bukkit.broadcastMessage(ChatColor.GREEN + "Battle started! Spawners active.");
+            Bukkit.getServer().sendMessage(Component.text("Battle started! Spawners active.", NamedTextColor.GREEN));
             for (Team t : teams) plugin.getMonsterSpawner().start(plugin, t.getName());
             return;
         }
@@ -188,20 +195,27 @@ public class PhaseSwitchHook {
                 if (plugin.getDataController().getGameState() != GameState.BATTLE) return;
                 if (secondsLeft > 0) {
                     for (Player p : Bukkit.getOnlinePlayers()) {
-                        p.sendTitle(ChatColor.RED + "Battle in", ChatColor.YELLOW + String.valueOf(secondsLeft) + ChatColor.GOLD + "s", 0, 20, 0);
+                        p.showTitle(Title.title(
+                                Component.text("Battle in", NamedTextColor.RED),
+                                Component.text()
+                                        .append(Component.text(String.valueOf(secondsLeft), NamedTextColor.YELLOW))
+                                        .append(Component.text("s", NamedTextColor.GOLD))
+                                        .build(),
+                                Title.Times.times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)
+                        ));
                     }
                     if (secondsLeft % 5 == 0 || secondsLeft <= 5) {
-                        Bukkit.broadcastMessage(ChatColor.YELLOW + "Battle starting in " + secondsLeft + "s...");
+                        Bukkit.getServer().sendMessage(Component.text("Battle starting in " + secondsLeft + "s...", NamedTextColor.YELLOW));
                     }
                 } else {
-                    Bukkit.broadcastMessage(ChatColor.GREEN + "Battle started! Spawners active.");
+                    Bukkit.getServer().sendMessage(Component.text("Battle started! Spawners active.", NamedTextColor.GREEN));
                     for (Team t : teams) plugin.getMonsterSpawner().start(plugin, t.getName());
                 }
             }, delay);
         }
     }
 
-    private void loadAndTeleportArenas(MonsterBattle plugin, Set<Team> teams, boolean separateDims) {
+    private void loadAndTeleportArenas(MonsterBattle plugin, Set<Team> teams) {
         boolean setRespawn = plugin.getConfig().getBoolean("set-arena-respawn", true);
         for (Team team : teams) {
             String baseName = "Arena_" + sanitizeWorldName(team.getName());
@@ -226,7 +240,10 @@ public class PhaseSwitchHook {
                     } catch (NoSuchMethodError ignored) {
                     }
                 }
-                p.sendMessage(ChatColor.GREEN + "Arena ready: " + baseName + (setRespawn ? ChatColor.GRAY + " (respawn set)" : ""));
+                p.sendMessage(Component.text()
+                        .append(Component.text("Arena ready: " + baseName, NamedTextColor.GREEN))
+                        .append(setRespawn ? Component.text(" (respawn set)", NamedTextColor.GRAY) : Component.empty())
+                        .build());
             }
         }
     }
@@ -263,12 +280,10 @@ public class PhaseSwitchHook {
 
 
         ScoreboardManager manager = Bukkit.getScoreboardManager();
-        if (manager != null) {
-            Set<Team> teams = manager.getMainScoreboard().getTeams();
-            for (Team team : teams) {
-                plugin.getBossbarController().hide(team.getName());
-                plugin.getBossbarController().cleanup(team.getName());
-            }
+        Set<Team> teams = manager.getMainScoreboard().getTeams();
+        for (Team team : teams) {
+            plugin.getBossbarController().hide(team.getName());
+            plugin.getBossbarController().cleanup(team.getName());
         }
 
         World mainWorld = Bukkit.getWorld("world");
@@ -277,7 +292,7 @@ public class PhaseSwitchHook {
             if (mainWorld != null) p.teleport(mainWorld.getSpawnLocation());
         }
 
-        Team winnerTeam = winner != null && manager != null ? manager.getMainScoreboard().getTeam(winner) : null;
+        Team winnerTeam = winner != null ? manager.getMainScoreboard().getTeam(winner) : null;
 
         int countdownSeconds = plugin.getConfig().getInt("end-countdown-seconds", 10);
         if (countdownSeconds < 0) countdownSeconds = 0;
@@ -299,7 +314,14 @@ public class PhaseSwitchHook {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (secondsLeft > 0) {
                     for (Player p : Bukkit.getOnlinePlayers()) {
-                        p.sendTitle(new Title(ChatColor.AQUA + "Winner reveal in", "" + ChatColor.YELLOW + secondsLeft + ChatColor.GOLD + "s", 0, 20, 0));
+                        p.showTitle(Title.title(
+                                Component.text("Winner reveal in", NamedTextColor.AQUA),
+                                Component.text()
+                                        .append(Component.text(String.valueOf(secondsLeft), NamedTextColor.YELLOW))
+                                        .append(Component.text("s", NamedTextColor.GOLD))
+                                        .build(),
+                                Title.Times.times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)
+                        ));
                     }
                 } else {
                     revealWinner(plugin, winnerCopy, winnerTeamCopy, finishTimes);
@@ -312,46 +334,62 @@ public class PhaseSwitchHook {
     private void revealWinner(MonsterBattle plugin, String winner, Team winnerTeam, Map<String, Long> finishTimes) {
         if (winner == null) {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                p.sendTitle(ChatColor.RED + "Game Over", ChatColor.GRAY + "No winner", 10, 80, 20);
+                p.showTitle(Title.title(
+                        Component.text("Game Over", NamedTextColor.RED),
+                        Component.text("No winner", NamedTextColor.GRAY),
+                        Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1))
+                ));
             }
-            Bukkit.broadcastMessage(ChatColor.RED + "Game Over - No winner");
+            Bukkit.getServer().sendMessage(Component.text("Game Over - No winner", NamedTextColor.RED));
             return;
         }
         long ms = finishTimes.getOrDefault(winner, 0L);
         double seconds = ms / 1000.0;
 
 
-        String playersList = "";
         if (winnerTeam != null) {
             List<String> names = new ArrayList<>(winnerTeam.getEntries());
             names.sort(String.CASE_INSENSITIVE_ORDER);
-            playersList = String.join(", ", names);
         }
-        String titleMain = ChatColor.GOLD + "WINNER: " + ChatColor.GREEN + winner;
 
         int captured = plugin.getDataController().getCapturedTotal(winner);
         double ratio = captured > 0 ? seconds / captured : 0.0;
-        String ratioPart = captured > 0 ? ChatColor.LIGHT_PURPLE + String.format(" %.2f s/mob", ratio) : ChatColor.DARK_GRAY + " N/A";
-        String subtitle = ChatColor.GRAY + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " - " + ChatColor.AQUA + captured + ChatColor.GRAY + " captured" + ChatColor.DARK_GRAY + " | " + ratioPart;
+
+        Component titleMain = Component.text()
+                .append(Component.text("WINNER: ", NamedTextColor.GOLD))
+                .append(Component.text(winner, NamedTextColor.GREEN))
+                .build();
+
+        Component subtitle = Component.text()
+                .append(Component.text(String.format("%.2f s", seconds), NamedTextColor.GRAY))
+                .append(Component.text(" - ", NamedTextColor.DARK_GRAY))
+                .append(Component.text(String.valueOf(captured), NamedTextColor.AQUA))
+                .append(Component.text(" captured", NamedTextColor.GRAY))
+                .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
+                .append(captured > 0 ?
+                        Component.text(String.format(" %.2f s/mob", ratio), NamedTextColor.LIGHT_PURPLE) :
+                        Component.text(" N/A", NamedTextColor.DARK_GRAY))
+                .build();
 
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.sendTitle(titleMain, subtitle, 10, 80, 20);
+            p.showTitle(Title.title(titleMain, subtitle, Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1))));
         }
-        Bukkit.broadcastMessage(ChatColor.YELLOW + "Winner: " + ChatColor.GOLD + winner + ChatColor.WHITE + " (" + String.format("%.2f s", seconds) + ", " + captured + " captured, " + (captured > 0 ? String.format("%.2f s/mob", ratio) : "N/A") + ")");
+
+        Bukkit.getServer().sendMessage(Component.text()
+                .append(Component.text("Winner: ", NamedTextColor.YELLOW))
+                .append(Component.text(winner, NamedTextColor.GOLD))
+                .append(Component.text(" (" + String.format("%.2f s", seconds) + ", " + captured + " captured, " +
+                        (captured > 0 ? String.format("%.2f s/mob", ratio) : "N/A") + ")", NamedTextColor.WHITE))
+                .build());
     }
 
     private void broadcastSummary(MonsterBattle plugin, List<Map.Entry<String, Long>> ordered) {
-        Bukkit.broadcastMessage(ChatColor.AQUA + "===== Game Summary =====");
+        Bukkit.getServer().sendMessage(Component.text("===== Game Summary =====", NamedTextColor.AQUA));
         ScoreboardManager sm = Bukkit.getScoreboardManager();
-        if (sm == null) {
-            Bukkit.broadcastMessage(ChatColor.RED + "Scoreboard unavailable.");
-            Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
-            return;
-        }
         var scoreboardTeams = new ArrayList<>(sm.getMainScoreboard().getTeams());
         if (scoreboardTeams.isEmpty()) {
-            Bukkit.broadcastMessage(ChatColor.GRAY + "No teams present.");
-            Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
+            Bukkit.getServer().sendMessage(Component.text("No teams present.", NamedTextColor.GRAY));
+            Bukkit.getServer().sendMessage(Component.text("========================", NamedTextColor.AQUA));
             return;
         }
 
@@ -370,8 +408,23 @@ public class PhaseSwitchHook {
             }
             int captured = plugin.getDataController().getCapturedTotal(teamName);
             double ratio = captured > 0 ? seconds / captured : 0.0;
-            String ratioStr = captured > 0 ? ChatColor.LIGHT_PURPLE + String.format("%.2f s/mob", ratio) : ChatColor.DARK_GRAY + "N/A";
-            Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (rank++) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + String.format("%.2f s", seconds) + ChatColor.DARK_GRAY + " / " + ChatColor.AQUA + captured + ChatColor.GRAY + " mobs" + ChatColor.DARK_GRAY + " | " + ratioStr);
+
+            Component message = Component.text()
+                    .append(Component.text("#" + (rank++), NamedTextColor.YELLOW))
+                    .append(Component.text(" "))
+                    .append(Component.text(teamName, NamedTextColor.GOLD))
+                    .append(playersList.isEmpty() ? Component.empty() :
+                            Component.text(" (" + playersList + ")", NamedTextColor.YELLOW))
+                    .append(Component.text(" - " + String.format("%.2f s", seconds), NamedTextColor.WHITE))
+                    .append(Component.text(" / ", NamedTextColor.DARK_GRAY))
+                    .append(Component.text(String.valueOf(captured), NamedTextColor.AQUA))
+                    .append(Component.text(" mobs", NamedTextColor.GRAY))
+                    .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
+                    .append(captured > 0 ?
+                            Component.text(String.format("%.2f s/mob", ratio), NamedTextColor.LIGHT_PURPLE) :
+                            Component.text("N/A", NamedTextColor.DARK_GRAY))
+                    .build();
+            Bukkit.getServer().sendMessage(message);
         }
 
 
@@ -382,10 +435,26 @@ public class PhaseSwitchHook {
             names.sort(String.CASE_INSENSITIVE_ORDER);
             String playersList = String.join(", ", names);
             int captured = plugin.getDataController().getCapturedTotal(teamName);
-            String ratioStr = captured > 0 ? ChatColor.LIGHT_PURPLE + "? s/mob" : ChatColor.DARK_GRAY + "N/A";
-            Bukkit.broadcastMessage(ChatColor.YELLOW + "#" + (rank++) + " " + ChatColor.GOLD + teamName + (playersList.isEmpty() ? "" : ChatColor.YELLOW + " (" + playersList + ")") + ChatColor.WHITE + " - " + ChatColor.RED + "DNF" + ChatColor.DARK_GRAY + " / " + ChatColor.AQUA + captured + ChatColor.GRAY + " mobs" + ChatColor.DARK_GRAY + " | " + ratioStr);
+
+            Component message = Component.text()
+                    .append(Component.text("#" + (rank++), NamedTextColor.YELLOW))
+                    .append(Component.text(" "))
+                    .append(Component.text(teamName, NamedTextColor.GOLD))
+                    .append(playersList.isEmpty() ? Component.empty() :
+                            Component.text(" (" + playersList + ")", NamedTextColor.YELLOW))
+                    .append(Component.text(" - ", NamedTextColor.WHITE))
+                    .append(Component.text("DNF", NamedTextColor.RED))
+                    .append(Component.text(" / ", NamedTextColor.DARK_GRAY))
+                    .append(Component.text(String.valueOf(captured), NamedTextColor.AQUA))
+                    .append(Component.text(" mobs", NamedTextColor.GRAY))
+                    .append(Component.text(" | ", NamedTextColor.DARK_GRAY))
+                    .append(captured > 0 ?
+                            Component.text("? s/mob", NamedTextColor.LIGHT_PURPLE) :
+                            Component.text("N/A", NamedTextColor.DARK_GRAY))
+                    .build();
+            Bukkit.getServer().sendMessage(message);
         }
-        Bukkit.broadcastMessage(ChatColor.AQUA + "========================");
+        Bukkit.getServer().sendMessage(Component.text("========================", NamedTextColor.AQUA));
     }
 
     private void resetPlayerStats(Player player) {
@@ -399,8 +468,9 @@ public class PhaseSwitchHook {
 
     private void resetPlayerInv(Player player) {
         player.getInventory().clear();
-        player.getInventory().setArmorContents(null);
-        player.getInventory().setExtraContents(null);
+        ItemStack[] empty = new ItemStack[4];
+        player.getInventory().setArmorContents(empty);
+        player.getInventory().setExtraContents(empty);
         player.updateInventory();
         player.setTotalExperience(0);
         player.setLevel(0);
@@ -410,7 +480,7 @@ public class PhaseSwitchHook {
         return raw.replaceAll("[^A-Za-z0-9_-]", "_");
     }
 
-    private void createAuxDimensions(MonsterBattle plugin, String baseName, long seed, World.Environment originEnv) {
+    private void createAuxDimensions(MonsterBattle plugin, String baseName, long seed) {
         if (!plugin.getConfig().getBoolean("separate-dimensions", true)) return;
         String netherName = baseName + "_nether";
         if (Bukkit.getWorld(netherName) == null) {
@@ -436,7 +506,6 @@ public class PhaseSwitchHook {
 
             @Override
             public @NotNull FileVisitResult visitFile(@NotNull Path file, @NotNull BasicFileAttributes attrs) throws IOException {
-                String fileName = file.getFileName().toString();
                 Path relative = source.relativize(file);
                 Path destFile = target.resolve(relative.toString());
                 Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);

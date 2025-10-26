@@ -2,8 +2,9 @@ package de.thecoolcraft11.monsterBattle.listener;
 
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.GameState;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -33,7 +34,7 @@ public class BattleMobDeathListener implements Listener {
         if (team == null) return;
         dc.registerMonsterDeath(living.getUniqueId());
 
-        
+
         int killTimeReduction = plugin.getConfig().getInt("monster-spawner.kill-time-reduction-ticks", 20);
         if (killTimeReduction > 0) {
             plugin.getMonsterSpawner().reduceSpawnTimer(team, killTimeReduction);
@@ -56,14 +57,20 @@ public class BattleMobDeathListener implements Listener {
                 if (p == null) continue;
                 if (remaining > 0) {
                     if (showRemaining) {
-                        p.sendMessage(ChatColor.AQUA + "Remaining arena mobs: " + ChatColor.YELLOW + remaining);
+                        p.sendMessage(Component.text()
+                                .append(Component.text("Remaining arena mobs: ", NamedTextColor.AQUA))
+                                .append(Component.text(String.valueOf(remaining), NamedTextColor.YELLOW))
+                                .build());
                     }
                 } else if (!hasWaitingMobs && privateFinish) {
 
                     long ms = dc.getTeamFinishTimes().getOrDefault(team, 0L);
                     double seconds = ms / 1000.0;
-                    p.sendMessage(ChatColor.GOLD + "All arena mobs defeated!" + ChatColor.GRAY + " (" + String.format("%.2f s", seconds) + ")");
-                    p.sendMessage(ChatColor.DARK_GRAY + "(Hidden from other teams until game end.)");
+                    p.sendMessage(Component.text()
+                            .append(Component.text("All arena mobs defeated!", NamedTextColor.GOLD))
+                            .append(Component.text(" (" + String.format("%.2f s", seconds) + ")", NamedTextColor.GRAY))
+                            .build());
+                    p.sendMessage(Component.text("(Hidden from other teams until game end.)", NamedTextColor.DARK_GRAY));
                 }
             }
         }
@@ -95,7 +102,6 @@ public class BattleMobDeathListener implements Listener {
     private void updateBossbarForTeam(String teamName) {
         var dc = plugin.getDataController();
         var sbManager = plugin.getServer().getScoreboardManager();
-        if (sbManager == null) return;
 
         Set<Team> allTeams = new HashSet<>(sbManager.getMainScoreboard().getTeams());
         Team thisTeam = sbManager.getMainScoreboard().getTeam(teamName);

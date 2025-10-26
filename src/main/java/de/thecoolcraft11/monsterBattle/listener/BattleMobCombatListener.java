@@ -48,10 +48,10 @@ public class BattleMobCombatListener implements Listener {
 
         if (victim instanceof Ghast) return;
 
-        
+
         if (damager instanceof Player) return;
 
-        
+
         if (victimTracked && (damager instanceof TNTPrimed ||
                 damager instanceof EnderCrystal ||
                 damager instanceof Projectile ||
@@ -59,7 +59,7 @@ public class BattleMobCombatListener implements Listener {
             return;
         }
 
-        
+
         if (victimTracked && damagerTracked) {
             EntityDamageEvent.DamageCause cause = event.getCause();
             if (cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
@@ -67,14 +67,14 @@ public class BattleMobCombatListener implements Listener {
             }
         }
 
-        
+
         if (damagerTracked && !(victim instanceof Player)) {
             event.setCancelled(true);
             retargetClosestPlayer(damager);
             return;
         }
 
-        
+
         if (victimTracked) {
             event.setCancelled(true);
             retargetClosestPlayer(victim);
@@ -84,10 +84,10 @@ public class BattleMobCombatListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onEntityDamage(EntityDamageEvent event) {
-        
+
         if (isTrackedBattleMob(event.getEntity())) {
             EntityDamageEvent.DamageCause cause = event.getCause();
-            
+
             if (cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
                     cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION ||
                     cause == EntityDamageEvent.DamageCause.CONTACT ||
@@ -100,8 +100,8 @@ public class BattleMobCombatListener implements Listener {
                     cause == EntityDamageEvent.DamageCause.MAGIC ||
                     cause == EntityDamageEvent.DamageCause.POISON ||
                     cause == EntityDamageEvent.DamageCause.WITHER) {
-                
-                return;
+
+                event.setCancelled(true);
             }
         }
     }
@@ -111,7 +111,6 @@ public class BattleMobCombatListener implements Listener {
         String team = plugin.getDataController().getTeamForMonster(mob.getUniqueId());
         if (team == null) return;
         var sb = Bukkit.getScoreboardManager();
-        if (sb == null) return;
         var t = sb.getMainScoreboard().getTeam(team);
         if (t == null) return;
         double best = Double.MAX_VALUE;

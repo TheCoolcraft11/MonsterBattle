@@ -1,6 +1,11 @@
 package de.thecoolcraft11.monsterBattle.command;
 
-import org.bukkit.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.WorldCreator;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -23,18 +28,18 @@ public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
         if (!sender.hasPermission("monsterbattle.dtp")) {
-            sender.sendMessage(ChatColor.RED + "You don't have permission.");
+            sender.sendMessage(Component.text("You don't have permission.", NamedTextColor.RED));
             return true;
         }
         if (args.length < 5) {
-            sender.sendMessage(ChatColor.YELLOW + "Usage: /" + label + " <player> <world> <x> <y> <z>");
+            sender.sendMessage(Component.text("Usage: /" + label + " <player> <world> <x> <y> <z>", NamedTextColor.YELLOW));
             return true;
         }
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Player not found: " + args[0]);
+            sender.sendMessage(Component.text("Player not found: " + args[0], NamedTextColor.RED));
             return true;
         }
         String worldName = args[1];
@@ -44,7 +49,7 @@ public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
             y = Double.parseDouble(args[3]);
             z = Double.parseDouble(args[4]);
         } catch (NumberFormatException ex) {
-            sender.sendMessage(ChatColor.RED + "Coordinates must be numbers.");
+            sender.sendMessage(Component.text("Coordinates must be numbers.", NamedTextColor.RED));
             return true;
         }
         World world = Bukkit.getWorld(worldName);
@@ -56,24 +61,24 @@ public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
             try {
                 world = new WorldCreator(worldName).environment(env).createWorld();
             } catch (Exception e) {
-                sender.sendMessage(ChatColor.RED + "Failed to load or create world: " + e.getMessage());
+                sender.sendMessage(Component.text("Failed to load or create world: " + e.getMessage(), NamedTextColor.RED));
                 return true;
             }
             if (world == null) {
-                sender.sendMessage(ChatColor.RED + "World could not be created: " + worldName);
+                sender.sendMessage(Component.text("World could not be created: " + worldName, NamedTextColor.RED));
                 return true;
             }
         }
         Location loc = new Location(world, x, y, z, target.getLocation().getYaw(), target.getLocation().getPitch());
         target.teleport(loc);
-        target.sendMessage(ChatColor.GREEN + "Teleported to " + worldName + " (" + x + ", " + y + ", " + z + ")");
+        target.sendMessage(Component.text("Teleported to " + worldName + " (" + x + ", " + y + ", " + z + ")", NamedTextColor.GREEN));
         if (sender != target)
-            sender.sendMessage(ChatColor.GRAY + "Teleported " + target.getName() + " to " + worldName + ".");
+            sender.sendMessage(Component.text("Teleported " + target.getName() + " to " + worldName + ".", NamedTextColor.GRAY));
         return true;
     }
 
     @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String @NotNull [] args) {
         if (!sender.hasPermission("monsterbattle.dtp")) return Collections.emptyList();
         switch (args.length) {
             case 1 -> {

@@ -1,8 +1,9 @@
 package de.thecoolcraft11.monsterBattle.util;
 
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
@@ -143,7 +144,10 @@ public class MonsterSpawner {
                         for (String entry : thisTeam.getEntries()) {
                             var p = Bukkit.getPlayerExact(entry);
                             if (p != null) {
-                                p.sendMessage(ChatColor.AQUA + "Spawned: " + ChatColor.YELLOW + spawnedThisCycle + ChatColor.AQUA + " | Active arena mobs: " + ChatColor.YELLOW + active);
+                                p.sendMessage(Component.text("Spawned: ", NamedTextColor.AQUA)
+                                        .append(Component.text(spawnedThisCycle, NamedTextColor.YELLOW))
+                                        .append(Component.text(" | Active arena mobs: ", NamedTextColor.AQUA))
+                                        .append(Component.text(active, NamedTextColor.YELLOW)));
                             }
                         }
                     }

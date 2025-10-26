@@ -1,6 +1,8 @@
 package de.thecoolcraft11.monsterBattle.listener;
 
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -43,29 +45,29 @@ public class PortalRedirectListener implements Listener {
                 if (dest == null) return;
                 Location to = scaleNether(event.getFrom(), dest, true);
                 event.setTo(to);
-                event.getPlayer().sendMessage(ChatColor.DARK_RED + "Entered nether: " + netherName);
+                event.getPlayer().sendMessage(Component.text("Entered nether: " + netherName, NamedTextColor.DARK_RED));
             } else if (fromName.equals(netherName)) {
                 World dest = ensureWorld(base, World.Environment.NORMAL, seed);
                 if (dest == null) return;
                 Location to = scaleNether(event.getFrom(), dest, false);
                 event.setTo(to);
-                event.getPlayer().sendMessage(ChatColor.GREEN + "Returned to overworld: " + base);
+                event.getPlayer().sendMessage(Component.text("Returned to overworld: " + base, NamedTextColor.GREEN));
             }
         } else if (cause == TeleportCause.END_PORTAL && endEnabled) {
             if (fromName.equals(base)) {
                 World dest = ensureWorld(endName, World.Environment.THE_END, seed);
                 if (dest == null) return;
                 Location to = new Location(dest, 100, 49, 0, 90, 0);
-                
+
                 event.setTo(to);
-                event.getPlayer().sendMessage(ChatColor.DARK_PURPLE + "Entered the End: " + endName);
+                event.getPlayer().sendMessage(Component.text("Entered the End: " + endName, NamedTextColor.DARK_PURPLE));
             } else if (fromName.equals(endName)) {
                 World dest = ensureWorld(base, World.Environment.NORMAL, seed);
                 if (dest == null) return;
                 Location to = new Location(dest, 100, 49, 0, 90, 0);
-                
+
                 event.setTo(to);
-                event.getPlayer().sendMessage(ChatColor.GREEN + "Returned to overworld: " + base);
+                event.getPlayer().sendMessage(Component.text("Returned to overworld: " + base, NamedTextColor.GREEN));
             }
         }
     }
@@ -101,8 +103,7 @@ public class PortalRedirectListener implements Listener {
             x *= 8.0;
             z *= 8.0;
         }
-        Location to = new Location(target, x, from.getY(), z, from.getYaw(), from.getPitch());
-        return to;
+        return new Location(target, x, from.getY(), z, from.getYaw(), from.getPitch());
     }
 
     private World ensureWorld(String name, World.Environment env, long seed) {

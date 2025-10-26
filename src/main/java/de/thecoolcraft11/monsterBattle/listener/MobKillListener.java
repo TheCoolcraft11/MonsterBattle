@@ -3,7 +3,8 @@ package de.thecoolcraft11.monsterBattle.listener;
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.GameState;
 import de.thecoolcraft11.monsterBattle.util.MobSnapshot;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -43,11 +44,15 @@ public class MobKillListener implements Listener {
                 for (MobSnapshot snap : snapshots) {
                     if (snap.getType() == type) ofType++;
                 }
-                killer.sendMessage(
-                        ChatColor.AQUA + "Captured: " + ChatColor.YELLOW + type.name() + ChatColor.GRAY + " (" +
-                                ChatColor.GOLD + total + ChatColor.GRAY + " Total, " +
-                                ChatColor.GOLD + ofType + ChatColor.GRAY + " " + type.name() + ")"
-                );
+                killer.sendMessage(Component.text()
+                        .append(Component.text("Captured: ", NamedTextColor.AQUA))
+                        .append(Component.text(type.name(), NamedTextColor.YELLOW))
+                        .append(Component.text(" (", NamedTextColor.GRAY))
+                        .append(Component.text(String.valueOf(total), NamedTextColor.GOLD))
+                        .append(Component.text(" Total, ", NamedTextColor.GRAY))
+                        .append(Component.text(String.valueOf(ofType), NamedTextColor.GOLD))
+                        .append(Component.text(" " + type.name() + ")", NamedTextColor.GRAY))
+                        .build());
             }
         }
     }

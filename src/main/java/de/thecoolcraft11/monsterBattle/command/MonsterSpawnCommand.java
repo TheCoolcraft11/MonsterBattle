@@ -2,7 +2,8 @@ package de.thecoolcraft11.monsterBattle.command;
 
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.SpawnData;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -27,13 +28,13 @@ public class MonsterSpawnCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendUsage(CommandSender sender, String label) {
-        sender.sendMessage(ChatColor.YELLOW + "Usage:");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " add <x> <y> <z> - add absolute coords (doubles, supports ~relative)");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " addhere - add your current block position");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " addrel <dx> <dy> <dz> - add relative to your position");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " list - list spawn points with indices");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " remove <index> - remove spawn point by index");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " clear - clear all spawn points");
+        sender.sendMessage(Component.text("Usage:", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("/" + label + " add <x> <y> <z> - add absolute coords (doubles, supports ~relative)", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("/" + label + " addhere - add your current block position", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("/" + label + " addrel <dx> <dy> <dz> - add relative to your position", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("/" + label + " list - list spawn points with indices", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("/" + label + " remove <index> - remove spawn point by index", NamedTextColor.GRAY));
+        sender.sendMessage(Component.text("/" + label + " clear - clear all spawn points", NamedTextColor.GRAY));
     }
 
     private double parseCoord(String token, double base) throws NumberFormatException {
@@ -56,59 +57,62 @@ public class MonsterSpawnCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "clear" -> {
                 plugin.getDataController().clearMonsterSpawns();
-                sender.sendMessage(ChatColor.GREEN + "All monster spawn points cleared.");
+                sender.sendMessage(Component.text("All monster spawn points cleared.", NamedTextColor.GREEN));
                 return true;
             }
             case "list" -> {
                 List<SpawnData> list = plugin.getDataController().getMonsterSpawns();
                 if (list.isEmpty()) {
-                    sender.sendMessage(ChatColor.YELLOW + "No spawn points set.");
+                    sender.sendMessage(Component.text("No spawn points set.", NamedTextColor.YELLOW));
                     return true;
                 }
-                sender.sendMessage(ChatColor.AQUA + "Monster Spawn Points (" + list.size() + "):");
+                sender.sendMessage(Component.text("Monster Spawn Points (" + list.size() + "):", NamedTextColor.AQUA));
                 for (int i = 0; i < list.size(); i++) {
                     SpawnData d = list.get(i);
-                    sender.sendMessage(ChatColor.GRAY + "#" + i + ChatColor.WHITE + ": " + d.x + ", " + d.y + ", " + d.z);
+                    sender.sendMessage(Component.text()
+                            .append(Component.text("#" + i, NamedTextColor.GRAY))
+                            .append(Component.text(": " + d.x + ", " + d.y + ", " + d.z, NamedTextColor.WHITE))
+                            .build());
                 }
                 return true;
             }
             case "remove" -> {
                 if (args.length != 2) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /" + label + " remove <index>");
+                    sender.sendMessage(Component.text("Usage: /" + label + " remove <index>", NamedTextColor.RED));
                     return true;
                 }
                 try {
                     int idx = Integer.parseInt(args[1]);
                     List<SpawnData> list = plugin.getDataController().getMonsterSpawns();
                     if (idx < 0 || idx >= list.size()) {
-                        sender.sendMessage(ChatColor.RED + "Index out of range 0-" + (list.size() - 1));
+                        sender.sendMessage(Component.text("Index out of range 0-" + (list.size() - 1), NamedTextColor.RED));
                         return true;
                     }
                     SpawnData removed = list.remove(idx);
-                    sender.sendMessage(ChatColor.GREEN + "Removed spawn #" + idx + " (" + removed.x + ", " + removed.y + ", " + removed.z + ")");
+                    sender.sendMessage(Component.text("Removed spawn #" + idx + " (" + removed.x + ", " + removed.y + ", " + removed.z + ")", NamedTextColor.GREEN));
                 } catch (NumberFormatException ex) {
-                    sender.sendMessage(ChatColor.RED + "Index must be a number.");
+                    sender.sendMessage(Component.text("Index must be a number.", NamedTextColor.RED));
                 }
                 return true;
             }
             case "addhere" -> {
                 if (!(sender instanceof Player p)) {
-                    sender.sendMessage(ChatColor.RED + "Player only command.");
+                    sender.sendMessage(Component.text("Player only command.", NamedTextColor.RED));
                     return true;
                 }
                 Location loc = p.getLocation();
                 SpawnData data = new SpawnData(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
                 plugin.getDataController().addMonsterSpawn(data);
-                sender.sendMessage(ChatColor.GREEN + "Added spawn at your location: " + data.x + ", " + data.y + ", " + data.z);
+                sender.sendMessage(Component.text("Added spawn at your location: " + data.x + ", " + data.y + ", " + data.z, NamedTextColor.GREEN));
                 return true;
             }
             case "addrel" -> {
                 if (!(sender instanceof Player p)) {
-                    sender.sendMessage(ChatColor.RED + "Player only command.");
+                    sender.sendMessage(Component.text("Player only command.", NamedTextColor.RED));
                     return true;
                 }
                 if (args.length != 4) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /" + label + " addrel <dx> <dy> <dz>");
+                    sender.sendMessage(Component.text("Usage: /" + label + " addrel <dx> <dy> <dz>", NamedTextColor.RED));
                     return true;
                 }
                 try {
@@ -118,19 +122,19 @@ public class MonsterSpawnCommand implements CommandExecutor, TabCompleter {
                     Location base = p.getLocation();
                     SpawnData data = new SpawnData(base.getX() + dx, base.getY() + dy, base.getZ() + dz);
                     plugin.getDataController().addMonsterSpawn(data);
-                    sender.sendMessage(ChatColor.GREEN + "Added relative spawn at: " + data.x + ", " + data.y + ", " + data.z);
+                    sender.sendMessage(Component.text("Added relative spawn at: " + data.x + ", " + data.y + ", " + data.z, NamedTextColor.GREEN));
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(ChatColor.RED + "dx dy dz must be numbers.");
+                    sender.sendMessage(Component.text("dx dy dz must be numbers.", NamedTextColor.RED));
                 }
                 return true;
             }
             case "add" -> {
                 if (args.length != 4) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /" + label + " add <x> <y> <z>");
+                    sender.sendMessage(Component.text("Usage: /" + label + " add <x> <y> <z>", NamedTextColor.RED));
                     return true;
                 }
-                if (!(sender instanceof Player p) && (args[1].startsWith("~") || args[2].startsWith("~") || args[3].startsWith("~"))) {
-                    sender.sendMessage(ChatColor.RED + "Relative (~) coordinates require a player executor.");
+                if (!(sender instanceof Player) && (args[1].startsWith("~") || args[2].startsWith("~") || args[3].startsWith("~"))) {
+                    sender.sendMessage(Component.text("Relative (~) coordinates require a player executor.", NamedTextColor.RED));
                     return true;
                 }
                 double baseX = 0, baseY = 0, baseZ = 0;
@@ -146,9 +150,9 @@ public class MonsterSpawnCommand implements CommandExecutor, TabCompleter {
                     double z = parseCoord(args[3], baseZ);
                     SpawnData data = new SpawnData(x, y, z);
                     plugin.getDataController().addMonsterSpawn(data);
-                    sender.sendMessage(ChatColor.GREEN + "Added spawn at: " + x + ", " + y + ", " + z);
+                    sender.sendMessage(Component.text("Added spawn at: " + x + ", " + y + ", " + z, NamedTextColor.GREEN));
                 } catch (NumberFormatException ex) {
-                    sender.sendMessage(ChatColor.RED + "Coordinates must be numbers (or ~relative).");
+                    sender.sendMessage(Component.text("Coordinates must be numbers (or ~relative).", NamedTextColor.RED));
                 }
                 return true;
             }
@@ -160,7 +164,7 @@ public class MonsterSpawnCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String @NotNull [] args) {
 
         if (!sender.hasPermission("monsterbattle.setphase")) return List.of();
         if (args.length == 1) {
@@ -183,7 +187,7 @@ public class MonsterSpawnCommand implements CommandExecutor, TabCompleter {
                 if (args.length == 3) return Arrays.asList("~", format(l.getY()));
                 if (args.length == 4) return Arrays.asList("~", format(l.getZ()));
             } else {
-                if (args.length >= 2 && args.length <= 4) return List.of("0");
+                if (args.length <= 4) return List.of("0");
             }
         }
         if (sub.equals("addrel")) {

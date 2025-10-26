@@ -14,6 +14,7 @@ import org.bukkit.potion.PotionEffect;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 
 public class MobSnapshot {
@@ -82,7 +83,7 @@ public class MobSnapshot {
             try {
                 spawned.customName(Component.text(customName));
             } catch (NoSuchMethodError ignored) {
-                spawned.setCustomName(customName);
+                spawned.customName(Component.text(customName));
             }
             spawned.setCustomNameVisible(customNameVisible);
         }
@@ -128,7 +129,7 @@ public class MobSnapshot {
         }
 
 
-        double max = spawned.getAttribute(Attribute.MAX_HEALTH) != null ? spawned.getAttribute(Attribute.MAX_HEALTH).getValue() : spawned.getHealth();
+        double max = spawned.getAttribute(Attribute.MAX_HEALTH) != null ? Objects.requireNonNull(spawned.getAttribute(Attribute.MAX_HEALTH)).getValue() : spawned.getHealth();
         double target;
         if (health <= 0) target = max;
         else if (health < max * 0.25) target = max;

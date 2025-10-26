@@ -2,8 +2,9 @@ package de.thecoolcraft11.monsterBattle.command;
 
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import de.thecoolcraft11.monsterBattle.util.GameState;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -30,29 +31,29 @@ public class MobTeleportCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "Players only.");
+            sender.sendMessage(Component.text("Players only.", NamedTextColor.RED));
             return true;
         }
         if (!player.hasPermission("monsterbattle.mobtp")) {
-            player.sendMessage(ChatColor.RED + "You lack permission: monsterbattle.mobtp");
+            player.sendMessage(Component.text("You dont have permission to do that!", NamedTextColor.RED));
             return true;
         }
         if (plugin.getDataController().getGameState() != GameState.BATTLE) {
-            player.sendMessage(ChatColor.RED + "Not in battle phase.");
+            player.sendMessage(Component.text("Not in battle phase.", NamedTextColor.RED));
             return true;
         }
         var sb = Bukkit.getScoreboardManager();
         Team team = sb.getMainScoreboard().getEntryTeam(player.getName());
         if (team == null) {
-            player.sendMessage(ChatColor.RED + "You're not on a team.");
+            player.sendMessage(Component.text("You're not on a team.", NamedTextColor.RED));
             return true;
         }
         String teamName = team.getName();
         Set<UUID> tracked = plugin.getDataController().getActiveMonstersView().getOrDefault(teamName, Collections.emptySet());
         if (tracked.isEmpty()) {
-            player.sendMessage(ChatColor.GREEN + "No remaining tracked mobs for your team.");
+            player.sendMessage(Component.text("No remaining tracked mobs for your team.", NamedTextColor.GREEN));
             return true;
         }
 
@@ -80,7 +81,7 @@ public class MobTeleportCommand implements CommandExecutor, TabCompleter {
                     UUID uuid = UUID.fromString(sub);
                     return teleportUUID(player, tracked, uuid);
                 } catch (IllegalArgumentException ignored) {
-                    player.sendMessage(ChatColor.RED + "Unknown argument. Use /" + label + " [nearest|random|list|index|uuid]");
+                    player.sendMessage(Component.text("Unknown argument. Use /" + label + " [nearest|random|list|index|uuid]", NamedTextColor.RED));
                     return true;
                 }
         }
@@ -93,27 +94,31 @@ public class MobTeleportCommand implements CommandExecutor, TabCompleter {
                 .filter(e -> !e.isDead() && e.isValid())
                 .collect(Collectors.toList());
         if (entities.isEmpty()) {
-            player.sendMessage(ChatColor.YELLOW + "All tracked mobs appear to be gone (waiting for maintenance cleanup).");
+            player.sendMessage(Component.text("All tracked mobs appear to be gone (waiting for maintenance cleanup).", NamedTextColor.YELLOW));
             return true;
         }
 
         entities.sort(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(player.getLocation())));
         List<UUID> ordering = entities.stream().map(Entity::getUniqueId).collect(Collectors.toList());
         lastLists.put(player.getUniqueId(), ordering);
-        player.sendMessage(ChatColor.AQUA + "Remaining mobs (" + ordering.size() + "):");
+        player.sendMessage(Component.text("Remaining mobs (" + ordering.size() + "):", NamedTextColor.AQUA));
         for (int i = 0; i < ordering.size(); i++) {
             Entity e = entities.get(i);
             Location l = e.getLocation();
-            String info = ChatColor.YELLOW + "#" + i + ChatColor.GRAY + " | " + ChatColor.GOLD + e.getType().name() + ChatColor.GRAY + " - " + l.getWorld().getName() + " " +
-                    String.format("(%.1f, %.1f, %.1f)", l.getX(), l.getY(), l.getZ());
+            Component info = Component.text("#" + i, NamedTextColor.YELLOW)
+                    .append(Component.text(" | ", NamedTextColor.GRAY))
+                    .append(Component.text(e.getType().name(), NamedTextColor.GOLD))
+                    .append(Component.text(" - " + l.getWorld().getName() + " " +
+                            String.format("(%.1f, %.1f, %.1f)", l.getX(), l.getY(), l.getZ()), NamedTextColor.GRAY));
             if (e instanceof LivingEntity le) {
-                info += ChatColor.DARK_GRAY + " HP:" + ChatColor.RED + String.format("%.1f", le.getHealth());
+                info = info.append(Component.text(" HP:", NamedTextColor.DARK_GRAY))
+                        .append(Component.text(String.format("%.1f", le.getHealth()), NamedTextColor.RED));
             }
             double dist = Math.sqrt(l.distanceSquared(player.getLocation()));
-            info += ChatColor.BLUE + String.format(" d=%.1f", dist);
+            info = info.append(Component.text(String.format(" d=%.1f", dist), NamedTextColor.BLUE));
             player.sendMessage(info);
         }
-        player.sendMessage(ChatColor.DARK_GRAY + "Tip: /mobtp <index> to teleport.");
+        player.sendMessage(Component.text("Tip: /mobtp <index> to teleport.", NamedTextColor.DARK_GRAY));
         return true;
     }
 
@@ -130,11 +135,12 @@ public class MobTeleportCommand implements CommandExecutor, TabCompleter {
             }
         }
         if (nearest == null) {
-            player.sendMessage(ChatColor.YELLOW + "No valid mobs found (may be waiting for cleanup).");
+            player.sendMessage(Component.text("No valid mobs found (may be waiting for cleanup).", NamedTextColor.YELLOW));
             return true;
         }
         player.teleport(nearest.getLocation());
-        player.sendMessage(ChatColor.GREEN + "Teleported to nearest mob: " + ChatColor.GOLD + nearest.getType().name());
+        player.sendMessage(Component.text("Teleported to nearest mob: ", NamedTextColor.GREEN)
+                .append(Component.text(nearest.getType().name(), NamedTextColor.GOLD)));
         return true;
     }
 
@@ -142,59 +148,62 @@ public class MobTeleportCommand implements CommandExecutor, TabCompleter {
         List<Entity> list = tracked.stream().map(Bukkit::getEntity)
                 .filter(Objects::nonNull)
                 .filter(e -> !e.isDead() && e.isValid())
-                .collect(Collectors.toList());
+                .toList();
         if (list.isEmpty()) {
-            player.sendMessage(ChatColor.YELLOW + "No valid mobs found (may be waiting for cleanup).");
+            player.sendMessage(Component.text("No valid mobs found (may be waiting for cleanup).", NamedTextColor.YELLOW));
             return true;
         }
         Entity e = list.get(new Random().nextInt(list.size()));
         player.teleport(e.getLocation());
-        player.sendMessage(ChatColor.GREEN + "Teleported to random mob: " + ChatColor.GOLD + e.getType().name());
+        player.sendMessage(Component.text("Teleported to random mob: ", NamedTextColor.GREEN)
+                .append(Component.text(e.getType().name(), NamedTextColor.GOLD)));
         return true;
     }
 
     private boolean teleportIndex(Player player, Set<UUID> tracked, int idx) {
         List<UUID> last = lastLists.get(player.getUniqueId());
         if (last == null) {
-            player.sendMessage(ChatColor.RED + "No cached list. Use /mobtp list first.");
+            player.sendMessage(Component.text("No cached list. Use /mobtp list first.", NamedTextColor.RED));
             return true;
         }
         if (idx < 0 || idx >= last.size()) {
-            player.sendMessage(ChatColor.RED + "Index out of range 0-" + (last.size() - 1));
+            player.sendMessage(Component.text("Index out of range 0-" + (last.size() - 1), NamedTextColor.RED));
             return true;
         }
         UUID id = last.get(idx);
         if (!tracked.contains(id)) {
-            player.sendMessage(ChatColor.RED + "That mob is no longer tracked.");
+            player.sendMessage(Component.text("That mob is no longer tracked.", NamedTextColor.RED));
             return true;
         }
         Entity e = Bukkit.getEntity(id);
         if (e == null || e.isDead() || !e.isValid()) {
-            player.sendMessage(ChatColor.RED + "Mob is gone.");
+            player.sendMessage(Component.text("Mob is gone.", NamedTextColor.RED));
             return true;
         }
         player.teleport(e.getLocation());
-        player.sendMessage(ChatColor.GREEN + "Teleported to mob #" + idx + ": " + ChatColor.GOLD + e.getType().name());
+        player.sendMessage(Component.text("Teleported to mob #" + idx + ": ", NamedTextColor.GREEN)
+                .append(Component.text(e.getType().name(), NamedTextColor.GOLD)));
         return true;
     }
 
     private boolean teleportUUID(Player player, Set<UUID> tracked, UUID uuid) {
         if (!tracked.contains(uuid)) {
-            player.sendMessage(ChatColor.RED + "UUID not a tracked mob for your team.");
+            player.sendMessage(Component.text("UUID not a tracked mob for your team.", NamedTextColor.RED));
             return true;
         }
         Entity e = Bukkit.getEntity(uuid);
         if (e == null || e.isDead() || !e.isValid()) {
-            player.sendMessage(ChatColor.RED + "Mob is gone.");
+            player.sendMessage(Component.text("Mob is gone.", NamedTextColor.RED));
             return true;
         }
         player.teleport(e.getLocation());
-        player.sendMessage(ChatColor.GREEN + "Teleported to mob: " + ChatColor.GOLD + e.getType().name());
+        player.sendMessage(Component.text("Teleported to mob: ", NamedTextColor.GREEN)
+                .append(Component.text(e.getType().name(), NamedTextColor.GOLD)));
         return true;
     }
 
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String @NotNull [] args) {
         if (!(sender instanceof Player p) || !p.hasPermission("monsterbattle.mobtp")) return List.of();
         if (args.length == 1) {
             String pref = args[0].toLowerCase(Locale.ROOT);

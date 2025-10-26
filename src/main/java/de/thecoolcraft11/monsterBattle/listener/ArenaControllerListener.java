@@ -10,12 +10,16 @@ import org.bukkit.event.entity.*;
 public class ArenaControllerListener implements Listener {
 
     private boolean isInArena(org.bukkit.entity.Entity entity) {
-        if (entity == null || entity.getWorld() == null) return false;
+        if (entity == null) {
+            return false;
+        } else {
+            entity.getWorld();
+        }
         String worldName = entity.getWorld().getName();
         return worldName.startsWith("Arena_") || entity.getScoreboardTags().contains("monsterbattle_arena");
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onEntityDeath(EntityDeathEvent event) {
         if (isInArena(event.getEntity())) {
@@ -24,7 +28,7 @@ public class ArenaControllerListener implements Listener {
         }
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (isInArena(event.getEntity())) {
@@ -35,7 +39,7 @@ public class ArenaControllerListener implements Listener {
         }
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onEntityCombust(EntityCombustEvent event) {
         if (isInArena(event.getEntity())) {
@@ -43,7 +47,7 @@ public class ArenaControllerListener implements Listener {
         }
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onEntityTransform(EntityTransformEvent event) {
         if (isInArena(event.getEntity())) {
@@ -51,11 +55,11 @@ public class ArenaControllerListener implements Listener {
         }
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         if (event.getEntity().getWorld().getName().startsWith("Arena_")) {
-            
+
             CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
             if (reason == CreatureSpawnEvent.SpawnReason.NATURAL ||
                     reason == CreatureSpawnEvent.SpawnReason.JOCKEY ||
@@ -72,18 +76,18 @@ public class ArenaControllerListener implements Listener {
         }
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onBlockSpread(BlockSpreadEvent event) {
         if (event.getBlock().getWorld().getName().startsWith("Arena_")) {
-            
+
             if (event.getSource().getType().toString().contains("FIRE")) {
                 event.setCancelled(true);
             }
         }
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onBlockBurn(BlockBurnEvent event) {
         if (event.getBlock().getWorld().getName().startsWith("Arena_")) {
@@ -91,7 +95,7 @@ public class ArenaControllerListener implements Listener {
         }
     }
 
-    
+
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         if (event.getBlock().getWorld().getName().startsWith("Arena_")) {

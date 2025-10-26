@@ -1,8 +1,9 @@
 package de.thecoolcraft11.monsterBattle.listener;
 
 import de.thecoolcraft11.monsterBattle.MonsterBattle;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.EntityType;
@@ -36,7 +37,7 @@ public class CapturedMobsInventoryListener implements Listener {
         public int currentTick = 0;
         public int currentSlotIndex = 0;
         public int lastDisplayedCount = 0;
-        
+
         public float previousPitch = 1.0f;
 
         public AnimationData(Inventory inventory, List<SlotData> slots) {
@@ -45,22 +46,8 @@ public class CapturedMobsInventoryListener implements Listener {
         }
     }
 
-    public static class SlotData {
-        public final int slot;
-        public final EntityType type;
-        public final Material material;
-        public final int targetCount;
-        public final int total;
-        public final double percentage;
-
-        public SlotData(int slot, EntityType type, Material material, int targetCount, int total, double percentage) {
-            this.slot = slot;
-            this.type = type;
-            this.material = material;
-            this.targetCount = targetCount;
-            this.total = total;
-            this.percentage = percentage;
-        }
+    public record SlotData(int slot, EntityType type, Material material, int targetCount, int total,
+                           double percentage) {
     }
 
     public void startAnimation(Player player, Inventory inventory, List<SlotData> slotData) {
@@ -71,10 +58,8 @@ public class CapturedMobsInventoryListener implements Listener {
         AnimationData data = new AnimationData(inventory, slotData);
         activeAnimations.put(playerId, data);
 
-        
-        data.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            animateTick(playerId, data);
-        }, 1L, 1L);
+
+        data.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> animateTick(playerId, data), 1L, 1L);
     }
 
     private void animateTick(UUID playerId, AnimationData data) {
@@ -92,14 +77,15 @@ public class CapturedMobsInventoryListener implements Listener {
         ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setMaxStackSize(99);
-            meta.setDisplayName(ChatColor.GOLD + currentSlot.type.name());
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.YELLOW + "Total: " + ChatColor.AQUA + currentSlot.total);
+            meta.displayName(Component.text(currentSlot.type.name(), NamedTextColor.GOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Total: ", NamedTextColor.YELLOW)
+                    .append(Component.text(currentSlot.total, NamedTextColor.AQUA)));
             if (currentSlot.total > 99) {
-                lore.add(ChatColor.GRAY + "Showing " + Math.min(99, currentSlot.total) + "/" + currentSlot.total + " (capped)");
+                lore.add(Component.text("Showing " + 99 + "/" + currentSlot.total + " (capped)", NamedTextColor.GRAY));
             }
-            lore.add(ChatColor.DARK_GRAY + String.format(Locale.US, "%.1f%% of team", currentSlot.percentage));
-            meta.setLore(lore);
+            lore.add(Component.text(String.format(Locale.US, "%.1f%% of team", currentSlot.percentage), NamedTextColor.DARK_GRAY));
+            meta.lore(lore);
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
             stack.setItemMeta(meta);
         }
@@ -108,22 +94,10 @@ public class CapturedMobsInventoryListener implements Listener {
         Player player = Bukkit.getPlayer(playerId);
         if (player != null && player.isOnline()) {
             try {
-                
+
                 if (currentCount > data.lastDisplayedCount) {
-                    
-                    int cappedTarget = Math.min(currentSlot.targetCount, 99);
-                    float ratio = cappedTarget <= 0 ? 0f : ((float) currentCount / (float) cappedTarget);
-                    float desiredPitch = 0.9f + Math.min(1.0f, ratio) * 0.6f; 
 
-                    
-                    float maxDelta = 0.15f;
-                    float delta = desiredPitch - data.previousPitch;
-                    if (delta > maxDelta) delta = maxDelta;
-                    if (delta < -maxDelta) delta = -maxDelta;
-                    float playPitch = data.previousPitch + delta;
-
-                    
-                    playPitch = Math.max(0.5f, Math.min(2.0f, playPitch));
+                    float playPitch = getPlayPitch(data, currentSlot, (float) currentCount);
 
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, playPitch);
                     data.previousPitch = playPitch;
@@ -137,15 +111,32 @@ public class CapturedMobsInventoryListener implements Listener {
             data.currentSlotIndex++;
             data.currentTick = 0;
             data.lastDisplayedCount = 0;
-            
+
             data.previousPitch += (1.0f - data.previousPitch) * 0.6f;
         }
 
-        
+
         if (data.previousPitch != 1.0f) {
             float decay = 0.2f;
             data.previousPitch += (1.0f - data.previousPitch) * decay;
         }
+    }
+
+    private static float getPlayPitch(AnimationData data, SlotData currentSlot, float currentCount) {
+        int cappedTarget = Math.min(currentSlot.targetCount, 99);
+        float ratio = cappedTarget <= 0 ? 0f : (currentCount / (float) cappedTarget);
+        float desiredPitch = 0.9f + Math.min(1.0f, ratio) * 0.6f;
+
+
+        float maxDelta = 0.15f;
+        float delta = desiredPitch - data.previousPitch;
+        if (delta > maxDelta) delta = maxDelta;
+        if (delta < -maxDelta) delta = -maxDelta;
+        float playPitch = data.previousPitch + delta;
+
+
+        playPitch = Math.max(0.5f, Math.min(2.0f, playPitch));
+        return playPitch;
     }
 
     /**
@@ -153,7 +144,7 @@ public class CapturedMobsInventoryListener implements Listener {
      * Uses easeInOutQuint easing and caps the displayed value at 99.
      */
     private int calculateCurrentCount(int tick, int targetCount) {
-        int animationDuration = 30; 
+        int animationDuration = 30;
 
         int cappedTarget = Math.min(targetCount, 99);
 
@@ -161,7 +152,7 @@ public class CapturedMobsInventoryListener implements Listener {
             return cappedTarget;
         }
 
-        double progress = (double) tick / animationDuration; 
+        double progress = (double) tick / animationDuration;
         double eased = easeInOutQuint(progress);
 
         return (int) Math.ceil(cappedTarget * eased);
@@ -186,16 +177,16 @@ public class CapturedMobsInventoryListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        String title = event.getView().getTitle();
-        if (title.contains("Captured - ")) {
+        Component title = event.getView().title();
+        if (title.toString().contains("Captured - ")) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        String title = event.getView().getTitle();
-        if (title.contains("Captured - ")) {
+        Component title = event.getView().title();
+        if (title.toString().contains("Captured - ")) {
             event.setCancelled(true);
         }
     }
@@ -203,8 +194,8 @@ public class CapturedMobsInventoryListener implements Listener {
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getPlayer() instanceof Player player) {
-            String title = event.getView().getTitle();
-            if (title.contains("Captured - ")) {
+            Component title = event.getView().title();
+            if (title.toString().contains("Captured - ")) {
                 stopAnimation(player.getUniqueId());
             }
         }
