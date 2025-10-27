@@ -33,7 +33,7 @@ public class ArenaBlockProtectionListener implements Listener {
         if (world == null) return true;
         if (plugin.getDataController().getGameState() != GameState.BATTLE) return true;
         String name = world.getName();
-        return !name.startsWith("Arena_");
+        return !name.startsWith(plugin.getArenaPrefix());
     }
 
     private long key(Block b) {

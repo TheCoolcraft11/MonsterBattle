@@ -8,6 +8,7 @@ commands:
     description: Set the game phase (lobby, farm, battle, end)
     usage: /setphase <lobby|farm|battle|end>
     permission: monsterbattle.setphase
+    permission-message: You don't have permission to use this command.
   mobspawn:
     description: Manage arena monster spawn points
     usage: |-
@@ -17,28 +18,47 @@ commands:
       /mobspawn list
       /mobspawn remove <index>
       /mobspawn clear
-    permission: monsterbattle.setphase
+    permission: monsterbattle.mobspawn
+    permission-message: You don't have permission to use this command.
   dtp:
     description: Teleport a player to a world (dimension) and coordinates
     usage: /dtp <player> <world> <x> <y> <z>
     permission: monsterbattle.dtp
+    permission-message: You don't have permission to use this command.
   worldname:
     description: Show the current world name (your own or another player's)
     usage: /worldname [player]
     permission: monsterbattle.worldname
+    permission-message: You don't have permission to use this command.
   mobtp:
     description: Teleport to a remaining tracked arena mob for your team (battle phase)
     usage: |-
       /mobtp [nearest|random|list]
     permission: monsterbattle.mobtp
+    permission-message: You don't have permission to use this command.
   capturedmobs:
     description: View captured mobs summary for your team or another team
     usage: /capturedmobs [team]
     permission: monsterbattle.captured.view
+  arena:
+    description: Manage arena worlds (create, teleport, delete, rename, load, teams)
+    usage: |-
+      /arena create <worldName>
+      /arena tp [worldName]
+      /arena delete <worldName> [--force]
+      /arena rename <oldWorldName> <newWorldName> [--update-config]
+      /arena load <worldName>
+      /arena teams <create|delete|reset|list|setup|join|leave> [args...]
+      /arena change-template [worldName]
+    permission: monsterbattle.arena
+    permission-message: You don't have permission to use this command.
 
 permissions:
   monsterbattle.setphase:
     description: Allows changing the game phase
+    default: op
+  monsterbattle.mobspawn:
+    description: Allows managing arena monster spawn points
     default: op
   monsterbattle.notify:
     description: Receive broadcast messages about phase changes
@@ -48,10 +68,10 @@ permissions:
     default: op
   monsterbattle.worldname:
     description: Allows using /worldname
-    default: true
+    default: op
   monsterbattle.mobtp:
     description: Allows using /mobtp to teleport to tracked arena mobs
-    default: true
+    default: op
   monsterbattle.captured.view:
     description: Allows viewing your own team's captured mobs
     default: true
@@ -60,4 +80,7 @@ permissions:
     default: op
   monsterbattle.captured.summary:
     description: Allows viewing summary of captured mobs for all teams
+    default: op
+  monsterbattle.arena:
+    description: Allows managing arena worlds (create, teleport, delete, rename, load)
     default: op

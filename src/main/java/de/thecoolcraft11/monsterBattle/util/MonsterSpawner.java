@@ -71,7 +71,7 @@ public class MonsterSpawner {
                     all.remove(thisTeam);
                     if (all.isEmpty()) return;
 
-                    String baseName = "Arena_" + sanitizeWorldName(currentTeam);
+                    String baseName = plugin.getArenaPrefix() + sanitizeWorldName(currentTeam);
                     World world = Bukkit.getWorld(baseName);
                     if (world == null) return;
 

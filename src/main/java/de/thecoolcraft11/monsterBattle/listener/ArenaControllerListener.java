@@ -1,5 +1,6 @@
 package de.thecoolcraft11.monsterBattle.listener;
 
+import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -9,6 +10,12 @@ import org.bukkit.event.entity.*;
 
 public class ArenaControllerListener implements Listener {
 
+    private final MonsterBattle plugin;
+
+    public ArenaControllerListener(MonsterBattle plugin) {
+        this.plugin = plugin;
+    }
+
     private boolean isInArena(org.bukkit.entity.Entity entity) {
         if (entity == null) {
             return false;
@@ -16,7 +23,7 @@ public class ArenaControllerListener implements Listener {
             entity.getWorld();
         }
         String worldName = entity.getWorld().getName();
-        return worldName.startsWith("Arena_") || entity.getScoreboardTags().contains("monsterbattle_arena");
+        return worldName.startsWith(plugin.getArenaPrefix()) || entity.getScoreboardTags().contains("monsterbattle_arena");
     }
 
 
@@ -58,7 +65,7 @@ public class ArenaControllerListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent event) {
-        if (event.getEntity().getWorld().getName().startsWith("Arena_")) {
+        if (event.getEntity().getWorld().getName().startsWith(plugin.getArenaPrefix())) {
 
             CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
             if (reason == CreatureSpawnEvent.SpawnReason.NATURAL ||
@@ -79,7 +86,7 @@ public class ArenaControllerListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockSpread(BlockSpreadEvent event) {
-        if (event.getBlock().getWorld().getName().startsWith("Arena_")) {
+        if (event.getBlock().getWorld().getName().startsWith(plugin.getArenaPrefix())) {
 
             if (event.getSource().getType().toString().contains("FIRE")) {
                 event.setCancelled(true);
@@ -90,7 +97,7 @@ public class ArenaControllerListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockBurn(BlockBurnEvent event) {
-        if (event.getBlock().getWorld().getName().startsWith("Arena_")) {
+        if (event.getBlock().getWorld().getName().startsWith(plugin.getArenaPrefix())) {
             event.setCancelled(true);
         }
     }
@@ -98,7 +105,7 @@ public class ArenaControllerListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
-        if (event.getBlock().getWorld().getName().startsWith("Arena_")) {
+        if (event.getBlock().getWorld().getName().startsWith(plugin.getArenaPrefix())) {
             event.setDropItems(false);
         }
     }

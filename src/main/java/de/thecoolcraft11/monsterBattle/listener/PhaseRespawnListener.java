@@ -41,7 +41,7 @@ public class PhaseRespawnListener implements Listener {
             return;
         }
 
-        String basePrefix = state == GameState.FARMING ? "Farm_" : "Arena_";
+        String basePrefix = state == GameState.FARMING ? "Farm_" : plugin.getArenaPrefix();
         String baseWorldName = basePrefix + sanitize(team.getName());
 
         World currentWorld = event.getRespawnLocation().getWorld();

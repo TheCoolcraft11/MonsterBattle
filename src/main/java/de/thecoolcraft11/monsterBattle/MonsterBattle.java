@@ -61,7 +61,7 @@ public final class MonsterBattle extends JavaPlugin {
             Objects.requireNonNull(getCommand("mobspawn")).setTabCompleter(msc);
         }
         if (getCommand("dtp") != null) {
-            DimensionTeleportCommand dtp = new DimensionTeleportCommand();
+            DimensionTeleportCommand dtp = new DimensionTeleportCommand(this);
             Objects.requireNonNull(getCommand("dtp")).setExecutor(dtp);
             Objects.requireNonNull(getCommand("dtp")).setTabCompleter(dtp);
         }
@@ -80,6 +80,11 @@ public final class MonsterBattle extends JavaPlugin {
             Objects.requireNonNull(getCommand("capturedmobs")).setExecutor(cmc);
             Objects.requireNonNull(getCommand("capturedmobs")).setTabCompleter(cmc);
         }
+        if (getCommand("arena") != null) {
+            ArenaCommand ac = new ArenaCommand(this);
+            Objects.requireNonNull(getCommand("arena")).setExecutor(ac);
+            Objects.requireNonNull(getCommand("arena")).setTabCompleter(ac);
+        }
         getServer().getPluginManager().registerEvents(new MobKillListener(this), this);
         getServer().getPluginManager().registerEvents(new PortalRedirectListener(this), this);
         getServer().getPluginManager().registerEvents(new BattleMobDeathListener(this), this);
@@ -97,7 +102,7 @@ public final class MonsterBattle extends JavaPlugin {
         arenaBlockProtectionListener = new ArenaBlockProtectionListener(this);
         getServer().getPluginManager().registerEvents(arenaBlockProtectionListener, this);
 
-        getServer().getPluginManager().registerEvents(new ArenaControllerListener(), this);
+        getServer().getPluginManager().registerEvents(new ArenaControllerListener(this), this);
 
         getServer().getPluginManager().registerEvents(new PhaseRespawnListener(this), this);
 
@@ -157,6 +162,16 @@ public final class MonsterBattle extends JavaPlugin {
 
     public CapturedMobsInventoryListener getCapturedMobsInventoryListener() {
         return capturedMobsInventoryListener;
+    }
+
+    /**
+     * Gets the arena world prefix from config (template world name + "_")
+     *
+     * @return The arena prefix (e.g., "Arena_" or "CustomArena_")
+     */
+    public String getArenaPrefix() {
+        String templateWorld = getConfig().getString("arena-template-world", "Arena");
+        return templateWorld + "_";
     }
 
     public void notifyBattleStarted() {
@@ -331,10 +346,10 @@ public final class MonsterBattle extends JavaPlugin {
             if (world == null) continue;
             String worldName = world.getName();
 
-
-            boolean isGameWorld = worldName.startsWith("Arena_") ||
+            String arenaPrefix = getArenaPrefix();
+            boolean isGameWorld = worldName.startsWith(arenaPrefix) ||
                     worldName.startsWith("Farm_") ||
-                    worldName.matches("Arena_.*_(nether|the_end)") ||
+                    worldName.matches(arenaPrefix.replace("_", "") + "_.*_(nether|the_end)") ||
                     worldName.matches("Farm_.*_(nether|the_end)");
 
             if (!isGameWorld) continue;
@@ -380,13 +395,14 @@ public final class MonsterBattle extends JavaPlugin {
             File[] worldFolders = worldContainer.listFiles(File::isDirectory);
 
             if (worldFolders != null) {
+                String arenaPrefix = getArenaPrefix();
                 for (File worldFolder : worldFolders) {
                     String worldName = worldFolder.getName();
 
 
-                    boolean isGameWorld = worldName.startsWith("Arena_") ||
+                    boolean isGameWorld = worldName.startsWith(arenaPrefix) ||
                             worldName.startsWith("Farm_") ||
-                            worldName.matches("Arena_.*_(nether|the_end)") ||
+                            worldName.matches(arenaPrefix.replace("_", "") + "_.*_(nether|the_end)") ||
                             worldName.matches("Farm_.*_(nether|the_end)");
 
                     if (!isGameWorld) continue;

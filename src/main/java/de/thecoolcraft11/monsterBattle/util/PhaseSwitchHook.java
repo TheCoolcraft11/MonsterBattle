@@ -133,8 +133,9 @@ public class PhaseSwitchHook {
         }
 
         List<Team> creationNeeded = new ArrayList<>();
+        String arenaPrefix = plugin.getArenaPrefix();
         for (Team t : teams) {
-            String baseName = "Arena_" + sanitizeWorldName(t.getName());
+            String baseName = arenaPrefix + sanitizeWorldName(t.getName());
             if (!Files.exists(serverRoot.resolve(baseName))) creationNeeded.add(t);
         }
 
@@ -156,7 +157,7 @@ public class PhaseSwitchHook {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             AtomicInteger success = new AtomicInteger();
             for (Team t : creationNeeded) {
-                String baseName = "Arena_" + sanitizeWorldName(t.getName());
+                String baseName = arenaPrefix + sanitizeWorldName(t.getName());
                 Path targetPath = serverRoot.resolve(baseName);
                 try {
                     copyWorld(templatePath, targetPath);
@@ -217,8 +218,9 @@ public class PhaseSwitchHook {
 
     private void loadAndTeleportArenas(MonsterBattle plugin, Set<Team> teams) {
         boolean setRespawn = plugin.getConfig().getBoolean("set-arena-respawn", true);
+        String arenaPrefix = plugin.getArenaPrefix();
         for (Team team : teams) {
-            String baseName = "Arena_" + sanitizeWorldName(team.getName());
+            String baseName = arenaPrefix + sanitizeWorldName(team.getName());
             World targetWorld = Bukkit.getWorld(baseName);
             if (targetWorld == null) {
                 targetWorld = new WorldCreator(baseName)
@@ -468,7 +470,7 @@ public class PhaseSwitchHook {
 
     private void resetPlayerInv(Player player) {
         player.getInventory().clear();
-        ItemStack[] empty = new ItemStack[4];
+        ItemStack[] empty = new ItemStack[3];
         player.getInventory().setArmorContents(empty);
         player.getInventory().setExtraContents(empty);
         player.updateInventory();

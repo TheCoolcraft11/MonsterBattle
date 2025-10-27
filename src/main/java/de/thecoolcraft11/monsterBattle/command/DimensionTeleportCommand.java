@@ -1,5 +1,6 @@
 package de.thecoolcraft11.monsterBattle.command;
 
+import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -24,7 +25,10 @@ import java.util.stream.Collectors;
 
 public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
 
-    public DimensionTeleportCommand() {
+    private final MonsterBattle plugin;
+
+    public DimensionTeleportCommand(MonsterBattle plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -108,20 +112,21 @@ public class DimensionTeleportCommand implements CommandExecutor, TabCompleter {
         return Collections.emptyList();
     }
 
-    private static @NotNull Set<String> getWorlds() {
+    private @NotNull Set<String> getWorlds() {
         Set<String> worlds = new HashSet<>();
 
         for (World w : Bukkit.getWorlds()) worlds.add(w.getName());
 
+        String arenaPrefix = plugin.getArenaPrefix();
         ScoreboardManager mgr = Bukkit.getScoreboardManager();
         for (Team t : mgr.getMainScoreboard().getTeams()) {
             String baseTeam = t.getName().replaceAll("[^A-Za-z0-9_-]", "_");
             worlds.add("Farm_" + baseTeam);
-            worlds.add("Arena_" + baseTeam);
+            worlds.add(arenaPrefix + baseTeam);
             worlds.add("Farm_" + baseTeam + "_nether");
             worlds.add("Farm_" + baseTeam + "_the_end");
-            worlds.add("Arena_" + baseTeam + "_nether");
-            worlds.add("Arena_" + baseTeam + "_the_end");
+            worlds.add(arenaPrefix + baseTeam + "_nether");
+            worlds.add(arenaPrefix + baseTeam + "_the_end");
         }
         return worlds;
     }

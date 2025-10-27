@@ -122,14 +122,15 @@ public class PortalRedirectListener implements Listener {
     }
 
     private String extractBase(String worldName) {
+        String arenaPrefix = plugin.getArenaPrefix();
         if (worldName.endsWith("_nether")) {
             String pre = worldName.substring(0, worldName.length() - "_nether".length());
-            if (pre.startsWith("Farm_") || pre.startsWith("Arena_")) return pre;
+            if (pre.startsWith("Farm_") || pre.startsWith(arenaPrefix)) return pre;
             return null;
         }
         if (worldName.endsWith("_the_end")) {
             String pre = worldName.substring(0, worldName.length() - "_the_end".length());
-            if (pre.startsWith("Farm_") || pre.startsWith("Arena_")) return pre;
+            if (pre.startsWith("Farm_") || pre.startsWith(arenaPrefix)) return pre;
             return null;
         }
         return worldName;

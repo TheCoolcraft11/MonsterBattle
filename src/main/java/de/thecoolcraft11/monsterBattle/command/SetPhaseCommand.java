@@ -84,22 +84,42 @@ public class SetPhaseCommand implements CommandExecutor, TabCompleter {
 
     private boolean checkSetupComplete(CommandSender sender) {
         if (plugin.getDataController().getMonsterSpawns().isEmpty()) {
-            sender.sendMessage(Component.text("Monster spawns are not configured yet. Please complete the setup first."));
+            sender.sendMessage(
+                    Component.text()
+                            .append(Component.text("[MonsterBattle] ", NamedTextColor.GOLD))
+                            .append(Component.text("Monster spawns are not configured yet. Please complete the setup first.", NamedTextColor.RED))
+                            .build()
+            );
             return false;
         }
         if (Bukkit.getServer().getScoreboardManager().getMainScoreboard().getTeams().size() != 2) {
             if (Bukkit.getServer().getScoreboardManager().getMainScoreboard().getTeams().size() < 2) {
-                sender.sendMessage(Component.text("Not enough teams are configured yet. Please complete the setup first."));
+                sender.sendMessage(
+                        Component.text()
+                                .append(Component.text("[MonsterBattle] ", NamedTextColor.GOLD))
+                                .append(Component.text("Not enough teams are configured yet. Please complete the setup first.", NamedTextColor.RED))
+                                .build()
+                );
                 return false;
             } else if (Bukkit.getServer().getScoreboardManager().getMainScoreboard().getTeams().size() > 2) {
-                sender.sendMessage(Component.text("Too many teams are configured. The maximum allowed is 4."));
+                sender.sendMessage(
+                        Component.text()
+                                .append(Component.text("[MonsterBattle] ", NamedTextColor.GOLD))
+                                .append(Component.text("Too many teams are configured. The maximum allowed is 4.", NamedTextColor.RED))
+                                .build()
+                );
                 return false;
             }
             return false;
         }
         World arena = Bukkit.getWorld(plugin.getConfig().getString("arena-template-world", "Arena"));
         if (arena == null) {
-            sender.sendMessage(Component.text("Arena world is not configured yet. Please complete the setup first."));
+            sender.sendMessage(
+                    Component.text()
+                            .append(Component.text("[MonsterBattle] ", NamedTextColor.GOLD))
+                            .append(Component.text("Arena world is not configured yet. Please complete the setup first.", NamedTextColor.RED))
+                            .build()
+            );
             return false;
         }
         return true;
