@@ -291,6 +291,7 @@ public class PhaseSwitchHook {
         World mainWorld = Bukkit.getWorld("world");
         if (mainWorld == null && !Bukkit.getWorlds().isEmpty()) mainWorld = Bukkit.getWorlds().getFirst();
         for (Player p : Bukkit.getOnlinePlayers()) {
+            p.setGameMode(GameMode.SURVIVAL);
             if (mainWorld != null) p.teleport(mainWorld.getSpawnLocation());
         }
 

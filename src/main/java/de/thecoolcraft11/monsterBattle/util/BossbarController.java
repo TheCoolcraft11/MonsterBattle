@@ -70,8 +70,8 @@ public class BossbarController {
             int currentlyAlive = (int) (spawnedMobs - mobsKilled);
             int notSpawned = (int) (totalMobs - spawnedMobs);
 
-            String title = String.format("Remaining: %d/%d • Alive: %d • Not Spawned: %d",
-                    remaining, (int) totalMobs, currentlyAlive, notSpawned);
+            String title = String.format("[%s] Remaining: %d/%d • Alive: %d • Not Spawned: %d",
+                    team, remaining, (int) totalMobs, currentlyAlive, notSpawned);
             bossBar.setTitle(title);
         } else {
             plugin.getLogger().warning("[BossBar] Could not find BossBar for team: " + team + " (sanitized: " + sanitizedTeam + ")");
@@ -84,8 +84,22 @@ public class BossbarController {
         if (bossBar != null) {
             bossBar.setProgress(0.0);
             bossBar.setColor(BarColor.GREEN);
-            String title = String.format("All mobs defeated! Time: %.2f s", time / 1000.0);
+            String title = String.format("[%s] All mobs defeated! Time: %.2f s", team, time / 1000.0);
             bossBar.setTitle(title);
+        }
+    }
+
+    public void addSpectators(String team, Team spectatorTeam) {
+        String sanitizedTeam = team.toLowerCase().replaceAll("[^a-z0-9_-]", "_");
+        BossBar bossBar = plugin.getServer().getBossBar(NamespacedKey.minecraft(BOSSBAR_ID + sanitizedTeam));
+        if (bossBar != null && spectatorTeam != null) {
+            for (String entry : spectatorTeam.getEntries()) {
+                Player player = Bukkit.getPlayerExact(entry);
+                if (player != null && player.isOnline()) {
+                    bossBar.addPlayer(player);
+                    plugin.getLogger().info("[BossBar] Added spectator " + player.getName() + " to team " + team + "'s bossbar");
+                }
+            }
         }
     }
 

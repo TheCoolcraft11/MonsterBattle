@@ -5,6 +5,7 @@ import de.thecoolcraft11.monsterBattle.util.GameState;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -78,10 +79,42 @@ public class BattleMobDeathListener implements Listener {
 
         updateBossbarForTeam(team);
 
-        
+
         if (remaining == 0 && !hasWaitingMobs && dc.isTeamFinished(team)) {
             long ms = dc.getTeamFinishTimes().getOrDefault(team, 0L);
             plugin.getBossbarController().finish(team, ms);
+
+            if (t != null) {
+                for (String entry : t.getEntries()) {
+                    Player p = Bukkit.getPlayerExact(entry);
+                    if (p != null && p.isOnline()) {
+                        p.setGameMode(GameMode.SPECTATOR);
+                        p.sendMessage(Component.text("Your team has finished! You are now in spectator mode.", NamedTextColor.AQUA));
+                    }
+                }
+
+                // Add spectators to other teams' bossbars so they can watch
+                addSpectatorsToActiveBossbars(team);
+            }
+        }
+    }
+
+    private void addSpectatorsToActiveBossbars(String finishedTeam) {
+        ScoreboardManager sm = plugin.getServer().getScoreboardManager();
+        Team finishedTeamObj = sm.getMainScoreboard().getTeam(finishedTeam);
+        if (finishedTeamObj == null) return;
+
+        // Get all teams that haven't finished yet
+        Set<Team> allTeams = new HashSet<>(sm.getMainScoreboard().getTeams());
+        var dc = plugin.getDataController();
+
+        for (Team otherTeam : allTeams) {
+            if (otherTeam.getName().equals(finishedTeam)) continue;
+
+            // Only add to bossbars of teams that haven't finished
+            if (!dc.isTeamFinished(otherTeam.getName())) {
+                plugin.getBossbarController().addSpectators(otherTeam.getName(), finishedTeamObj);
+            }
         }
     }
 
