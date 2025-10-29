@@ -78,7 +78,7 @@ public class BattleMobDeathListener implements Listener {
 
         updateBossbarForTeam(team);
 
-
+        
         if (remaining == 0 && !hasWaitingMobs && dc.isTeamFinished(team)) {
             long ms = dc.getTeamFinishTimes().getOrDefault(team, 0L);
             plugin.getBossbarController().finish(team, ms);

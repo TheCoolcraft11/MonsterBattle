@@ -335,7 +335,7 @@ public final class MonsterBattle extends JavaPlugin {
         int removed = 0;
 
 
-        World mainWorld = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
+        World mainWorld = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().getFirst();
         if (mainWorld == null) {
             getLogger().warning("[Cleanup] Cannot find main world for teleporting players!");
             return;

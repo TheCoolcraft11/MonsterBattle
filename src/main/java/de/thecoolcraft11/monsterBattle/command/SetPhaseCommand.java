@@ -105,7 +105,7 @@ public class SetPhaseCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(
                         Component.text()
                                 .append(Component.text("[MonsterBattle] ", NamedTextColor.GOLD))
-                                .append(Component.text("Too many teams are configured. The maximum allowed is 4.", NamedTextColor.RED))
+                                .append(Component.text("Too many teams are configured. The maximum allowed is 2.", NamedTextColor.RED))
                                 .build()
                 );
                 return false;

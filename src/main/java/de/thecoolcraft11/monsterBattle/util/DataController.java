@@ -6,7 +6,7 @@ import java.util.*;
 
 public class DataController {
     private Map<String, List<MobSnapshot>> teamKills = new HashMap<>();
-    private final Map<String, List<MobSnapshot>> capturedMobsSnapshot = new HashMap<>(); 
+    private final Map<String, List<MobSnapshot>> capturedMobsSnapshot = new HashMap<>();
     private GameState gameState = GameState.LOBBY;
     private final List<SpawnData> monsterSpawns = new ArrayList<>();
 
@@ -89,14 +89,21 @@ public class DataController {
         teamCapturedTotals.clear();
         battleStartTime = System.currentTimeMillis();
 
-        
+
         capturedMobsSnapshot.clear();
         for (String t : teams) {
             activeMonsters.put(t, new HashSet<>());
             List<MobSnapshot> teamList = getKillsForTeam(t);
-            teamCapturedTotals.put(t, teamList.size());
-            
+            int capturedCount = teamList.size();
+            teamCapturedTotals.put(t, capturedCount);
+
             capturedMobsSnapshot.put(t, new ArrayList<>(teamList));
+
+            
+            
+            if (capturedCount == 0) {
+                teamFinishTimes.put(t, 0L);
+            }
         }
         clearBattleChunkTickets();
     }
@@ -153,13 +160,13 @@ public class DataController {
         return teamCapturedTotals.getOrDefault(team, 0);
     }
 
-    
+
     public List<MobSnapshot> getCapturedMobsForTeam(String team) {
-        
+
         if (gameState == GameState.BATTLE || gameState == GameState.ENDED) {
             return capturedMobsSnapshot.getOrDefault(team, Collections.emptyList());
         }
-        
+
         return getKillsForTeam(team);
     }
 

@@ -148,36 +148,5 @@ public class BattleMobRemovalListener implements Listener {
 
         plugin.getBossbarController().updateProgress(teamName, mobsKilled, totalMobs, actualSpawned);
     }
-
-
-    public void debugSweep() {
-        if (plugin.getDataController().getGameState() != GameState.BATTLE) return;
-        int removed = 0;
-        var dc = plugin.getDataController();
-        Set<String> affectedTeams = new HashSet<>();
-
-        for (var entry : dc.getActiveMonstersView().entrySet()) {
-            for (var id : entry.getValue()) {
-                Entity e = Bukkit.getEntity(id);
-                if (e == null || e.isDead() || !e.isValid()) {
-                    String team = dc.getTeamForMonster(id);
-                    dc.registerMonsterDeath(id);
-                    if (team != null) {
-                        affectedTeams.add(team);
-                    }
-                    removed++;
-                }
-            }
-        }
-
-
-        for (String team : affectedTeams) {
-            handleMobDeath(team);
-        }
-
-        if (removed > 0 && plugin.getConfig().getBoolean("battle-integrity-scan.debug-log", false)) {
-            plugin.getLogger().info("Removal listener debug sweep pruned " + removed + " stale tracked mobs.");
-        }
-    }
 }
 

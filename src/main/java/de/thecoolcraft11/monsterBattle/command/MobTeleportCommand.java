@@ -19,7 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
+@SuppressWarnings("SameReturnValue")
 public class MobTeleportCommand implements CommandExecutor, TabCompleter {
 
     private final MonsterBattle plugin;

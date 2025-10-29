@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("SameReturnValue")
 public class ArenaCommand implements CommandExecutor, TabCompleter {
 
     private final MonsterBattle plugin;
@@ -854,13 +855,9 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
 
             net.kyori.adventure.text.format.TextColor teamColor = NamedTextColor.WHITE;
             try {
-                net.kyori.adventure.text.format.TextColor color = team.color();
-                if (color != null) {
-                    teamColor = color;
-                }
-            } catch (IllegalStateException e) {
+                teamColor = team.color();
+            } catch (IllegalStateException ignored) {
 
-                teamColor = NamedTextColor.WHITE;
             }
 
             Component teamInfo = Component.text()
@@ -1360,11 +1357,7 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /**
-     * Parse command arguments with support for quoted strings.
-     * Handles both single and double quotes.
-     * Example: ["--prefix", "\"My", "Team\""] -> ["--prefix", "My Team"]
-     */
+
     private List<String> parseQuotedArgs(String[] args) {
         List<String> result = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
@@ -1473,8 +1466,8 @@ public class ArenaCommand implements CommandExecutor, TabCompleter {
                     Path serverRoot = Bukkit.getWorldContainer().toPath();
                     List<String> unloadedWorlds = new ArrayList<>();
 
-                    try {
-                        Files.list(serverRoot)
+                    try (Stream<Path> paths = Files.list(serverRoot)) {
+                        paths
                                 .filter(Files::isDirectory)
                                 .map(path -> path.getFileName().toString())
                                 .filter(name -> {

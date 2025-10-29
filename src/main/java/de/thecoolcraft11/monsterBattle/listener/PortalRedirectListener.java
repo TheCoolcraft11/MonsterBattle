@@ -88,11 +88,6 @@ public class PortalRedirectListener implements Listener {
         event.setRespawnLocation(to);
     }
 
-    private void copyOrientation(Location from, Location to) {
-        to.setYaw(from.getYaw());
-        to.setPitch(from.getPitch());
-    }
-
     private Location scaleNether(Location from, World target, boolean overworldToNether) {
         double x = from.getX();
         double z = from.getZ();

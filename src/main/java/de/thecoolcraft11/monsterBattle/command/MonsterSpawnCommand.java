@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("SameReturnValue")
 public class MonsterSpawnCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBS = Arrays.asList("add", "addhere", "addrel", "list", "remove", "clear");
