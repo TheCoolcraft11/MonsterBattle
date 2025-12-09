@@ -77,7 +77,6 @@ public class PhaseSwitchHook {
                 p.sendMessage(Component.text()
                         .append(Component.text("Farming phase started: ", NamedTextColor.GREEN))
                         .append(Component.text(baseName, NamedTextColor.YELLOW))
-                        .append(Component.text(" (seed: " + configuredSeed + ")", NamedTextColor.GRAY))
                         .append(setFarmRespawn ? Component.text(" [respawn set]", NamedTextColor.DARK_GRAY) : Component.empty())
                         .build());
             }
