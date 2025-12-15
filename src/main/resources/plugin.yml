@@ -2,6 +2,8 @@ name: MonsterBattle
 version: '1.0-SNAPSHOT'
 main: de.thecoolcraft11.monsterBattle.MonsterBattle
 api-version: '1.21'
+author: TheCoolcraft11
+website: https://github.com/TheCoolcraft11/SharedHearts
 
 commands:
   setphase:
