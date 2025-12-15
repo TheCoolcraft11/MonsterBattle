@@ -2,6 +2,7 @@ name: MonsterBattle
 version: '1.0-SNAPSHOT'
 main: de.thecoolcraft11.monsterBattle.MonsterBattle
 api-version: '1.21'
+description: A Minecraft minigame where players have to gather monsters and beat the opponents army quicker than they do.
 author: TheCoolcraft11
 website: https://github.com/TheCoolcraft11/SharedHearts
 
