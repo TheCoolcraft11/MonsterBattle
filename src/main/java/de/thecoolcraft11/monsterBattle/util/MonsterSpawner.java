@@ -28,6 +28,7 @@ public class MonsterSpawner {
         final boolean spawnAll = plugin.getConfig().getBoolean("monster-spawner.spawn-all-on-cycle", false);
         final int configuredMax = plugin.getConfig().getInt("monster-spawner.max-spawn-per-cycle", -1);
         int interval = plugin.getConfig().getInt("monster-spawner.tick-interval", 60);
+        int maxActiveMobs = plugin.getConfig().getInt("monster-spawner.max-active-mobs", -1);
         if (interval <= 0) interval = 60;
 
         final int baseInterval = interval;
@@ -53,7 +54,6 @@ public class MonsterSpawner {
                     nextSpawnTicks.put(currentTeam, tickCounter + currentInterval);
 
 
-                    int maxActiveMobs = plugin.getConfig().getInt("monster-spawner.max-active-mobs", -1);
                     if (maxActiveMobs > 0) {
                         int currentActive = plugin.getDataController().getRemainingForTeam(currentTeam);
                         if (currentActive >= maxActiveMobs) {

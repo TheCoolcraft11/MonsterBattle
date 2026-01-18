@@ -80,31 +80,7 @@ public class BattleMobCombatListener implements Listener {
             retargetClosestPlayer(victim);
         }
     }
-
-
-    @EventHandler(ignoreCancelled = true)
-    public void onEntityDamage(EntityDamageEvent event) {
-
-        if (isTrackedBattleMob(event.getEntity())) {
-            EntityDamageEvent.DamageCause cause = event.getCause();
-
-            if (cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION ||
-                    cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION ||
-                    cause == EntityDamageEvent.DamageCause.CONTACT ||
-                    cause == EntityDamageEvent.DamageCause.FALL ||
-                    cause == EntityDamageEvent.DamageCause.FALLING_BLOCK ||
-                    cause == EntityDamageEvent.DamageCause.FIRE ||
-                    cause == EntityDamageEvent.DamageCause.FIRE_TICK ||
-                    cause == EntityDamageEvent.DamageCause.LAVA ||
-                    cause == EntityDamageEvent.DamageCause.LIGHTNING ||
-                    cause == EntityDamageEvent.DamageCause.MAGIC ||
-                    cause == EntityDamageEvent.DamageCause.POISON ||
-                    cause == EntityDamageEvent.DamageCause.WITHER) {
-
-                event.setCancelled(true);
-            }
-        }
-    }
+    
 
     private void retargetClosestPlayer(Entity source) {
         if (!(source instanceof Mob mob)) return;

@@ -4,6 +4,7 @@ import de.thecoolcraft11.monsterBattle.MonsterBattle;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Ageable;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -11,10 +12,9 @@ import org.bukkit.entity.Slime;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 
 public class MobSnapshot {
@@ -139,5 +139,101 @@ public class MobSnapshot {
 
     private static ItemStack cloneOrNull(ItemStack stack) {
         return (stack == null || stack.getType().isAir()) ? null : stack.clone();
+    }
+
+    
+    public Map<String, Object> serialize() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("type", type.name());
+        data.put("baby", baby);
+        if (slimeSize != null) data.put("slimeSize", slimeSize);
+        if (customName != null) data.put("customName", customName);
+        data.put("customNameVisible", customNameVisible);
+        data.put("health", health);
+        if (helmet != null) data.put("helmet", helmet);
+        if (chest != null) data.put("chest", chest);
+        if (legs != null) data.put("legs", legs);
+        if (boots != null) data.put("boots", boots);
+        if (mainHand != null) data.put("mainHand", mainHand);
+        if (offHand != null) data.put("offHand", offHand);
+
+        if (!potionEffects.isEmpty()) {
+            List<Map<String, Object>> effectsList = new ArrayList<>();
+            for (PotionEffect effect : potionEffects) {
+                Map<String, Object> effectData = new HashMap<>();
+                effectData.put("type", effect.getType().getKey());
+                effectData.put("duration", effect.getDuration());
+                effectData.put("amplifier", effect.getAmplifier());
+                effectData.put("ambient", effect.isAmbient());
+                effectData.put("particles", effect.hasParticles());
+                try {
+                    effectData.put("icon", effect.hasIcon());
+                } catch (NoSuchMethodError ignored) {
+                    
+                }
+                effectsList.add(effectData);
+            }
+            data.put("potionEffects", effectsList);
+        }
+        return data;
+    }
+
+    public static MobSnapshot deserialize(ConfigurationSection section) {
+        try {
+            EntityType type = EntityType.valueOf(section.getString("type", "ZOMBIE"));
+            boolean baby = section.getBoolean("baby", false);
+            Integer slimeSize = section.contains("slimeSize") ? section.getInt("slimeSize") : null;
+            String customName = section.getString("customName");
+            boolean customNameVisible = section.getBoolean("customNameVisible", false);
+            double health = section.getDouble("health", 20.0);
+
+            ItemStack helmet = section.getItemStack("helmet");
+            ItemStack chest = section.getItemStack("chest");
+            ItemStack legs = section.getItemStack("legs");
+            ItemStack boots = section.getItemStack("boots");
+            ItemStack mainHand = section.getItemStack("mainHand");
+            ItemStack offHand = section.getItemStack("offHand");
+
+            List<PotionEffect> potionEffects = new ArrayList<>();
+            if (section.contains("potionEffects")) {
+                List<Map<?, ?>> effectsList = section.getMapList("potionEffects");
+                for (Map<?, ?> effectData : effectsList) {
+                    try {
+                        String typeName = (String) effectData.get("type");
+                        PotionEffectType effectType = PotionEffectType.getByName(typeName);
+                        if (effectType != null) {
+                            Object durationObj = effectData.get("duration");
+                            Object amplifierObj = effectData.get("amplifier");
+                            Object ambientObj = effectData.get("ambient");
+                            Object particlesObj = effectData.get("particles");
+                            Object iconObj = effectData.get("icon");
+
+                            int duration = durationObj instanceof Number ? ((Number) durationObj).intValue() : 100;
+                            int amplifier = amplifierObj instanceof Number ? ((Number) amplifierObj).intValue() : 0;
+                            boolean ambient = ambientObj instanceof Boolean ? (Boolean) ambientObj : false;
+                            boolean particles = particlesObj instanceof Boolean ? (Boolean) particlesObj : true;
+
+                            PotionEffect effect;
+                            try {
+                                boolean icon = iconObj instanceof Boolean ? (Boolean) iconObj : true;
+                                effect = new PotionEffect(effectType, duration, amplifier, ambient, particles, icon);
+                            } catch (NoSuchMethodError | IllegalArgumentException e) {
+                                effect = new PotionEffect(effectType, duration, amplifier, ambient, particles);
+                            }
+                            potionEffects.add(effect);
+                        }
+                    } catch (Exception ignored) {
+                        
+                    }
+                }
+            }
+
+            return new MobSnapshot(type, baby, slimeSize, customName, customNameVisible, health,
+                    helmet, chest, legs, boots, mainHand, offHand, potionEffects);
+        } catch (Exception e) {
+            
+            return new MobSnapshot(EntityType.ZOMBIE, false, null, null, false, 20.0,
+                    null, null, null, null, null, null, new ArrayList<>());
+        }
     }
 }

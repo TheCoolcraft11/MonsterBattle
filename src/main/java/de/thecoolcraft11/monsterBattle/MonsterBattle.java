@@ -85,6 +85,11 @@ public final class MonsterBattle extends JavaPlugin {
             Objects.requireNonNull(getCommand("arena")).setExecutor(ac);
             Objects.requireNonNull(getCommand("arena")).setTabCompleter(ac);
         }
+        if (getCommand("army") != null) {
+            ArmyCommand armyCmd = new ArmyCommand(this);
+            Objects.requireNonNull(getCommand("army")).setExecutor(armyCmd);
+            Objects.requireNonNull(getCommand("army")).setTabCompleter(armyCmd);
+        }
         getServer().getPluginManager().registerEvents(new MobKillListener(this), this);
         getServer().getPluginManager().registerEvents(new PortalRedirectListener(this), this);
         getServer().getPluginManager().registerEvents(new BattleMobDeathListener(this), this);

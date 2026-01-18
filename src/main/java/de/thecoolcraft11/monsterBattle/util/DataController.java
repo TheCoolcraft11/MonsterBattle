@@ -1,7 +1,11 @@
 package de.thecoolcraft11.monsterBattle.util;
 
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.LivingEntity;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 public class DataController {
@@ -99,8 +103,7 @@ public class DataController {
 
             capturedMobsSnapshot.put(t, new ArrayList<>(teamList));
 
-            
-            
+
             if (capturedCount == 0) {
                 teamFinishTimes.put(t, 0L);
             }
@@ -209,5 +212,54 @@ public class DataController {
 
     public synchronized void clearBattleChunkTickets() {
         battleChunkTickets.clear();
+    }
+
+
+    public void saveArmies(File saveFile) throws IOException {
+        YamlConfiguration config = new YamlConfiguration();
+
+        for (Map.Entry<String, List<MobSnapshot>> entry : teamKills.entrySet()) {
+            String teamName = entry.getKey();
+            List<MobSnapshot> army = entry.getValue();
+
+            if (!army.isEmpty()) {
+                List<Map<String, Object>> serializedArmy = new ArrayList<>();
+                for (MobSnapshot snapshot : army) {
+                    serializedArmy.add(snapshot.serialize());
+                }
+                config.set("armies." + teamName, serializedArmy);
+            }
+        }
+
+        config.save(saveFile);
+    }
+
+    public void loadArmies(File saveFile) throws IOException {
+        if (!saveFile.exists()) {
+            return;
+        }
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(saveFile);
+        ConfigurationSection armiesSection = config.getConfigurationSection("armies");
+
+        if (armiesSection == null) {
+            return;
+        }
+
+        teamKills.clear();
+
+        for (String teamName : armiesSection.getKeys(false)) {
+            ConfigurationSection teamSection = armiesSection.getConfigurationSection(teamName);
+            if (teamSection != null) {
+                List<MobSnapshot> army = new ArrayList<>();
+                for (String key : teamSection.getKeys(false)) {
+                    ConfigurationSection mobSection = teamSection.getConfigurationSection(key);
+                    if (mobSection != null) {
+                        army.add(MobSnapshot.deserialize(mobSection));
+                    }
+                }
+                teamKills.put(teamName, army);
+            }
+        }
     }
 }

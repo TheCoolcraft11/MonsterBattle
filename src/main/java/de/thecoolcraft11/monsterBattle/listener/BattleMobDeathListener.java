@@ -93,7 +93,7 @@ public class BattleMobDeathListener implements Listener {
                     }
                 }
 
-                // Add spectators to other teams' bossbars so they can watch
+                
                 addSpectatorsToActiveBossbars(team);
             }
         }
@@ -104,14 +104,14 @@ public class BattleMobDeathListener implements Listener {
         Team finishedTeamObj = sm.getMainScoreboard().getTeam(finishedTeam);
         if (finishedTeamObj == null) return;
 
-        // Get all teams that haven't finished yet
+        
         Set<Team> allTeams = new HashSet<>(sm.getMainScoreboard().getTeams());
         var dc = plugin.getDataController();
 
         for (Team otherTeam : allTeams) {
             if (otherTeam.getName().equals(finishedTeam)) continue;
 
-            // Only add to bossbars of teams that haven't finished
+            
             if (!dc.isTeamFinished(otherTeam.getName())) {
                 plugin.getBossbarController().addSpectators(otherTeam.getName(), finishedTeamObj);
             }

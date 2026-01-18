@@ -55,6 +55,13 @@ commands:
       /arena change-template [worldName]
     permission: monsterbattle.arena
     permission-message: You don't have permission to use this command.
+  army:
+    description: Save or load team armies (captured mobs)
+    usage: |-
+      /army save [filename]
+      /army load [filename]
+    permission: monsterbattle.army
+    permission-message: You don't have permission to use this command.
 
 permissions:
   monsterbattle.setphase:
@@ -86,4 +93,7 @@ permissions:
     default: op
   monsterbattle.arena:
     description: Allows managing arena worlds (create, teleport, delete, rename, load)
+    default: op
+  monsterbattle.army:
+    description: Allows saving and loading team armies
     default: op
